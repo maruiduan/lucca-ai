@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+TONGJI = (ROOT / "scripts" / "baidu_tongji.html").read_text(encoding="utf-8").strip()
 f = sys.argv[1]
 src = (ROOT / "p2src" / f"{f}.html").read_text()
 meta, rest = src.split("\n", 1)
@@ -17,7 +18,9 @@ body_html = body.strip()
 out = (
     head
     + style
-    + "</style>\n</head>\n<body>\n"
+    + "</style>\n"
+    + TONGJI
+    + "\n</head>\n<body>\n"
     + '<div class="progress" id="progress"></div>\n'
     + '<div class="sbar ui" id="sbar" aria-hidden="true">'
     + '<button id="sb-toc" aria-label="打开目录">☰ 目录</button>'
