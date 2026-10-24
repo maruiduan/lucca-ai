@@ -26,6 +26,8 @@ jobs:
         run: python3 -m pip install -r requirements.txt
       - name: Stamp site → dist
         run: python3 scripts/stamp_static.py site dist
+      - name: Check OSS security header encoding
+        run: python3 scripts/upload_oss.py --check
       - name: Upload dist to lucca-ai
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
