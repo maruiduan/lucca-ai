@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """把 src/<slug>.html 片段套进统一模板，写到 site/<slug>/index.html。不碰第 1 篇（llm）。"""
 import re, os, sys, html
-ROOT='/workspace/ai-preview'
+from pathlib import Path
+ROOT=str(Path(__file__).resolve().parent)
 V='3'
 SERIES=[('llm','什么是 LLM'),('pretrain','预训练'),('posttrain','后训练'),('context','上下文与提示词'),
         ('hallucination','幻觉与局限'),('rag','RAG：先查资料再回答'),('reasoning','推理模型'),('small','蒸馏与量化')]
