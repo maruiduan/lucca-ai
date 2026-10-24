@@ -1,0 +1,152 @@
+{"n":13,"short":"Skill","js":"skill.js"}
+<style>
+.stack{display:flex;height:30px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--bg);margin:6px 0 2px}
+.stack i{display:block;height:100%;transition:width .45s ease;min-width:0}
+.blbl{font-size:13px;color:var(--sub);margin-top:8px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--sub);margin:4px 0}
+.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+.k1{--c:#8a8476}.k2{--c:#2f6f8f}.k3{--c:#b0812a}.k4{--c:#a33a2b}
+.sk{display:grid;gap:6px;margin:10px 0}
+.ski{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg);font-size:14px;line-height:1.55;transition:all .3s}
+.ski code{font-weight:600}.ski small{display:block;color:var(--sub)}
+.ski.hit{border-color:var(--green);background:var(--blue-soft)}
+.ski.wrong{border-color:var(--accent);background:var(--soft)}
+.fld{display:block;font-size:13px;color:var(--sub);margin:8px 0 3px}
+.fld input,.fld textarea{display:block;width:100%;box-sizing:border-box;margin-top:3px;font:14px/1.5 ui-monospace,Menlo,monospace;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.rules{list-style:none;padding:0;margin:8px 0;font-size:14px;line-height:1.7}
+.rules li.bad{color:var(--accent)}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+</style>
+<h1>Skill：把经验写成一本「用时才翻」的说明书</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 5 篇　|　约 14 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small>工具让智能体「能做」，但不告诉它「怎么做才对」：你们公司的报告格式、填某种表格的步骤、某个库的坑。<strong>Skill（技能）</strong>就是一个文件夹，里面放一份 <code>SKILL.md</code> 说明书，可以再带上脚本和参考资料。妙处在于<strong>平时只占一两行，用到时才整本翻开</strong>。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">为什么需要 Skill</a></li>
+<li><a href="#s2">一个 Skill 长什么样</a></li>
+<li><a href="#s3">三层渐进披露：省下上下文的关键</a></li>
+<li><a href="#s4">智能体怎么知道该翻哪本</a></li>
+<li><a href="#s5">动手写一份</a></li>
+<li><a href="#s6">Skill、MCP、提示词、子智能体怎么选</a></li>
+<li><a href="#s7">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>为什么需要 Skill</h2>
+<p>假设你让智能体「按我们部门的格式写周报」。它有读写文件的工具，也很会写字，但它<b>不知道</b>你们的格式：标题怎么写、数据放哪一节、哪些词不能用。传统做法有两种，都不理想：</p>
+<ul>
+<li><b>每次在对话里重新交代</b>：累，而且容易漏。</li>
+<li><b>全写进系统提示</b>：一次还好。但你还有报销规则、代码规范、PPT 模板、合同审核要点……几十份全塞进去，每一轮都要重读，<a href="../context-eng/">上下文工程</a>那篇说过的又贵又糊涂就来了。</li>
+</ul>
+<p>Anthropic 在 2025 年 10 月 16 日的文章《Equipping agents for the real world with Agent Skills》里提出的办法是：把每份经验做成一个独立的文件夹，智能体<b>平时只知道有哪些</b>，需要时再自己去读。好比新员工入职，不用背下整本手册，只要知道「报销的事看第 3 章」。</p>
+<p>2025 年 12 月 18 日，这个格式作为开放标准发布在 agentskills.io，已被越来越多的智能体产品采用。</p>
+
+<h2 id="s2"><span class="k">02</span>一个 Skill 长什么样</h2>
+<p>就是一个文件夹。必须有的只有 <code>SKILL.md</code>：</p>
+<div class="rawbox"><span class="dim">weekly-report/</span>
+├── <b>SKILL.md</b>          <span class="dim"># 必需：简介 + 说明</span>
+├── scripts/          <span class="dim"># 可选：可以运行的脚本</span>
+│   └── fetch_metrics.py
+├── references/       <span class="dim"># 可选：更详细的参考资料</span>
+│   └── style-guide.md
+└── assets/           <span class="dim"># 可选：模板等</span>
+    └── template.docx</div>
+<p><code>SKILL.md</code> 开头是一小段 YAML「封面」，下面是正文：</p>
+<div class="rawbox"><span class="sys">---
+name: weekly-report
+description: 按市场部格式撰写周报。用户提到"周报"、
+  "本周总结"或需要汇报每周数据时使用。
+---</span>
+# 写周报
+
+1. 先运行 scripts/fetch_metrics.py 拉取本周数据
+2. 按 assets/template.docx 的四节结构写：
+   本周结果 / 关键数据 / 风险 / 下周计划
+3. 措辞要求见 references/style-guide.md
+   <span class="dim">（只有需要核对措辞时再读）</span></div>
+<p>封面只有两个必填项：<b>name</b>（最多 64 个字符，只能用小写字母、数字和连字符）和 <b>description</b>（最多 1024 个字符，写清楚<b>做什么、什么时候用</b>）。正文就是写给智能体看的普通说明，可以引用文件夹里的其他文件。</p>
+<p>注意 <code>scripts/</code>：有些事用代码做比让模型「想」更可靠，比如从 PDF 里抽表格、算一组数据。Skill 可以附带脚本，智能体直接运行它，只把结果读进上下文，脚本本身的代码不用占地方。</p>
+
+<h2 id="s3"><span class="k">03</span>三层渐进披露：省下上下文的关键</h2>
+<p>规范把这叫做「渐进披露」（progressive disclosure），分三层：</p>
+<ol class="steps">
+<li><b>第一层：封面</b>。启动时，所有已安装 Skill 的 name 和 description 进入上下文，每个约 <b>100 token</b>。</li>
+<li><b>第二层：正文</b>。智能体判断某个 Skill 用得上时，才读整份 <code>SKILL.md</code>。规范建议正文<b>不超过 5000 token</b>、500 行以内。</li>
+<li><b>第三层：附件</b>。正文里提到的参考资料、脚本、模板，<b>真要用时</b>才读或运行。</li>
+</ol>
+<div class="demo" id="pd-demo">
+ <div class="demo-h"><b>小实验 ①：装了很多 Skill，上下文会被撑爆吗</b><span class="badge">示意数字</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>已安装 <span class="temp-val" id="pd-nv">20</span> 个 Skill</span></div>
+  <input type="range" id="pd-n" min="1" max="200" value="20" aria-label="Skill 数量">
+ </div>
+ <div class="seg" id="pd-task"><button class="on">闲聊，不用任何 Skill</button><button>写周报（用 1 个）</button><button>写周报 + 核对措辞</button></div>
+ <div class="blbl">全部塞进系统提示</div><div class="stack" id="pd-a"></div>
+ <div class="blbl">渐进披露</div><div class="stack" id="pd-b"></div>
+ <div class="lg"><span class="k1">其他上下文</span><span class="k2">Skill 封面</span><span class="k3">Skill 正文</span><span class="k4">附件</span></div>
+ <div class="kpis"><div class="kpi">全部塞进去<b id="pd-x">—</b></div><div class="kpi">渐进披露<b class="ac" id="pd-y">—</b></div></div>
+ <p class="pipe-cap" id="pd-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 示意数字：每个封面按规范说的约 100 token，正文按 3000 token、参考资料按 4000 token 估，其他上下文按 20K、窗口按 200K。</p>
+</div>
+<p>这意味着 Skill 可以装很多而几乎不占地方，单个 Skill 也可以带很多资料，因为没用到的部分不花钱。Anthropic 原文举的例子是 PDF 技能：<code>SKILL.md</code> 讲常用操作，填表这种少见的需求单独放在 <code>forms.md</code>，只有用户要填表时才读。</p>
+
+<h2 id="s4"><span class="k">04</span>智能体怎么知道该翻哪本</h2>
+<p>没有什么魔法：模型看着上下文里那一排封面，<b>根据 description 自己判断</b>该读哪个，然后用读文件的工具去打开它。所以 description 写得好不好，直接决定 Skill 会不会在该用的时候被用上。</p>
+<div class="demo" id="tr-demo">
+ <div class="demo-h"><b>小实验 ②：同样的请求，描述写法不同</b><span class="badge">模拟</span></div>
+ <div class="seg" id="tr-q"><button class="on">「帮我把这份合同里的付款条款找出来」</button><button>「本周总结写一下」</button><button>「这个 PDF 表格帮我填好」</button></div>
+ <div class="row" style="margin-top:8px"><button class="tgl" id="tr-vague">description 写得含糊：关</button></div>
+ <div class="sk" id="tr-list"></div>
+ <div class="verdict" id="tr-r"></div>
+ <p class="lbl">⚠️ 这里用「请求和描述有没有共同的关键词」来模拟模型的判断，真实模型理解得更灵活，但「描述含糊就容易选错或不选」这一点是一样的。</p>
+</div>
+<p>规范给的建议正是如此：description 要同时写「做什么」和「什么时候用」，并带上用户可能说的关键词。</p>
+
+<h2 id="s5"><span class="k">05</span>动手写一份</h2>
+<p>下面是一个按规范检查封面的小工具，改改看哪些写法不合格：</p>
+<div class="demo" id="ed-demo">
+ <div class="demo-h"><b>小实验 ③：检查 SKILL.md 的封面</b><span class="badge">按规范校验</span></div>
+ <label class="fld">name<input id="ed-name" value="Weekly_Report" autocomplete="off" spellcheck="false"></label>
+ <label class="fld">description<textarea id="ed-desc" rows="3">写周报</textarea></label>
+ <div class="seg" id="ed-pre"><button>试试合格的</button><button>连字符开头</button><button>两个连字符</button></div>
+ <ul class="rules" id="ed-rules"></ul>
+ <div class="verdict" id="ed-r"></div>
+</div>
+<p>规范还要求 name 和文件夹名一致。写正文时的经验：只写模型<b>不知道</b>的东西（你们的规矩、具体步骤、容易出错的地方），别教它「什么是周报」；长的参考资料拆到单独文件里，正文里写清楚「什么情况下去读哪个文件」。</p>
+<p class="lbl">⚠️ Skill 里可以放脚本，装一个来路不明的 Skill 等于让智能体运行别人的代码、听别人的指令。和 MCP 服务器一样，只装可信来源的。</p>
+
+<h2 id="s6"><span class="k">06</span>Skill、MCP、提示词、子智能体怎么选</h2>
+<p>它们经常一起出现，但解决的问题不同：</p>
+<div class="hscroll"><table class="t">
+<tr><th>东西</th><th>解决什么</th><th>一句话</th></tr>
+<tr><td><b>MCP</b></td><td>能连上什么</td><td>给智能体新的「手」：接外部服务</td></tr>
+<tr><td><b>Skill</b></td><td>怎么做才对</td><td>给智能体按需翻阅的「手册」</td></tr>
+<tr><td><b>系统提示</b></td><td>每次都要遵守的</td><td>永远在场的几句话，越短越好</td></tr>
+<tr><td><b>子智能体</b></td><td>别弄脏主上下文</td><td>派出去干活、只交回结论（第 7 篇）</td></tr>
+</table></div>
+<div class="demo" id="ch-demo">
+ <div class="demo-h"><b>小实验 ④：这个需求该用哪个</b><span class="badge">小测验</span></div>
+ <div class="sk" id="ch"></div>
+ <div class="kpis"><div class="kpi">答对<b class="ac" id="ch-s">0 / 5</b></div></div>
+</div>
+<p>下一篇讲怎么把这些东西<b>打包</b>：一个插件里可以同时装着 Skill、MCP 服务器、命令和钩子，一键装进软件。</p>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li>Skill = 一个带 <code>SKILL.md</code> 的文件夹，可附带脚本、参考资料、模板。2025 年 10 月由 Anthropic 提出，12 月成为开放标准。</li>
+<li>核心是<b>渐进披露</b>：封面（约 100 token）常驻，正文用时才读，附件要用时才读。装很多也不撑爆上下文。</li>
+<li>智能体靠 <b>description</b> 决定翻哪本，所以要写清「做什么 + 什么时候用」。</li>
+<li>MCP 给「手」，Skill 给「手册」。来路不明的 Skill 和服务器一样别乱装。</li>
+</ol>
+<div class="pn">
+ <a href="../mcp/"><small>← 上一篇</small>MCP</a>
+ <a class="nx" href="../plugins/"><small>下一篇 →</small>扩展与插件</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Anthropic，<a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills" rel="noopener">Equipping agents for the real world with Agent Skills</a>（2025 年 10 月 16 日）。文件夹结构、三层渐进披露、PDF 技能与 forms.md 的例子。</li>
+<li>Agent Skills，<a href="https://agentskills.io/specification" rel="noopener">Specification</a>。name/description 的限制、约 100 token 封面、正文建议不超过 5000 token 和 500 行、scripts/references/assets 目录。</li>
+<li>Anthropic，<a href="https://claude.com/blog/organization-skills-and-directory" rel="noopener">Skills for organizations, partners, the ecosystem</a>（2025 年 12 月 18 日）：「We're also publishing Agent Skills as an open standard」；<a href="https://claude.com/resources/articles/skills" rel="noopener">Introducing Agent Skills</a> 页首的更新说明也注明了 2025 年 12 月 18 日。</li>
+<li><a href="https://agentskills.io/" rel="noopener">agentskills.io</a>：作为开放标准发布（2025 年 12 月 18 日），「最初由 Anthropic 开发，已被越来越多的智能体产品采用」。</li>
+</ol>
+<p class="note">本页的周报 Skill、上下文数字和触发模拟都是虚构示例；实验 ③ 的规则来自官方规范。</p>

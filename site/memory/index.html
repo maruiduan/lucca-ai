@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>记忆与子任务 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="记忆与子任务：智能体怎样记住该记的事，什么时候该把任务拆给多个子智能体。"><link rel="canonical" href="https://ai.lucca.top/memory/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="记忆与子任务 · AI 是怎么回事 · lucca"><meta property="og:description" content="记忆与子任务：智能体怎样记住该记的事，什么时候该把任务拆给多个子智能体。"><meta property="og:url" content="https://ai.lucca.top/memory/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+<style>
+.mem{display:grid;gap:6px;margin:10px 0}
+.mr{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg);font-size:14px;line-height:1.55;transition:all .3s}
+.mr small{grid-column:1/-1;color:var(--sub);font:12px ui-monospace,Menlo,monospace}
+.mr .sc{font:600 13px ui-monospace,Menlo,monospace;color:var(--sub)}
+.mr.top{border-color:var(--green);background:var(--blue-soft)}.mr.top .sc{color:var(--green)}
+.mr.dim{opacity:.5}.mr.bad{border-color:var(--accent);background:var(--soft)}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+.ag div{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--bg);font-size:13.5px;line-height:1.55}
+.ag b{display:block;font-size:13px;color:var(--sub)}
+.ag .x{border-color:var(--accent);background:var(--soft)}.ag .y{border-color:var(--green)}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 15 篇</span></nav>
+<article id="art">
+<h1>记忆与子任务：记住该记的，分出去该分的</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 7 篇　|　约 15 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small>模型本身没有记忆，窗口也有上限。智能体用两招突破：<strong>记忆</strong>是把信息存到窗口<strong>外面</strong>，需要时再取回来；<strong>子任务</strong>是把活分给另一个智能体，让它在<strong>自己的窗口</strong>里干，只交回结论。两招都很有用，也都有坑：记错了、取错了、分得各干各的。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">8 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">三种「记忆」</a></li>
+<li><a href="#s2">像操作系统一样管内存</a></li>
+<li><a href="#s3">取哪条：新、要紧、相关</a></li>
+<li><a href="#s4">记什么、忘什么</a></li>
+<li><a href="#s5">子任务：多派几个人去干</a></li>
+<li><a href="#s6">什么时候值得分</a></li>
+<li><a href="#s7">分出去最怕各干各的</a></li>
+<li><a href="#s8">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>三种「记忆」</h2>
+<p>说智能体「记得」什么，可能是三种完全不同的东西：</p>
+<div class="hscroll"><table class="t">
+<tr><th>类型</th><th>存在哪</th><th>像人的</th><th>例子</th></tr>
+<tr><td><b>参数里的</b></td><td>训练时学进模型权重</td><td>常识、技能</td><td>知道巴黎是法国首都</td></tr>
+<tr><td><b>上下文里的</b></td><td>当前窗口</td><td>手头这张草稿纸</td><td>这次对话前面说过的话</td></tr>
+<tr><td><b>外部的</b></td><td>文件、数据库，用时检索</td><td>笔记本、日记</td><td>「你上个月说过你对花生过敏」</td></tr>
+</table></div>
+<p>第一种改起来要重新训练（第一部分讲过），第二种用完即丢（<a href="../context/">第 4 篇</a>和<a href="../context-eng/">上下文工程</a>讲过）。这一篇说的「记忆」主要是第三种：<b>跨对话、跨任务长期保留的外部记忆</b>。它的实现方式和<a href="../rag/">检索增强（RAG）</a>很像，只是检索的对象从「资料库」变成了「我和你过去的经历」。</p>
+
+<h2 id="s2"><span class="k">02</span>像操作系统一样管内存</h2>
+<p>2023 年 10 月，伯克利的研究者发表 <b>MemGPT</b>，用了一个很好懂的比喻：电脑内存小、硬盘大，操作系统在两者之间搬数据，让程序以为自己有很大的内存。那么上下文窗口就是「内存」，外部存储就是「硬盘」，让<b>模型自己调用工具</b>在两者之间搬：</p>
+<ul>
+<li>窗口快满时，把旧内容<b>存出去</b>（写入外部记忆）。</li>
+<li>需要时，<b>搜索</b>外部记忆，把相关的那几条<b>调进来</b>。</li>
+<li>窗口里留一块「核心记忆」，放关于用户和自己最重要的几条事实，随时可改。</li>
+</ul>
+<p>论文把这叫做「虚拟上下文管理」。今天的产品做法各不相同，但基本都是这个框架：<b>记忆的读写本身就是工具调用</b>。ChatGPT 从 2024 年 2 月 13 日开始测试记忆功能，2025 年 4 月 10 日扩展为两种：你明确让它记的「保存的记忆」，和它从过往对话中自己提炼的「聊天记录参考」，两者都可以在设置里关掉，也可以用「临时聊天」不读不写记忆。</p>
+
+<h2 id="s3"><span class="k">03</span>取哪条：新、要紧、相关</h2>
+<p>存进去容易，难的是<b>取对</b>。2023 年 4 月斯坦福的「生成式智能体」论文造了一个 25 个 AI 居民的小镇，每个居民有一条按时间记录一切经历的「记忆流」。要做决定时，给每条记忆打三项分数再相加：</p>
+<ul>
+<li><b>新近</b>（recency）：越近越高。按游戏里的小时数指数衰减，每小时乘 0.995。</li>
+<li><b>重要</b>（importance）：写入时让模型打 1–10 分，「刷牙」是 1，「分手」「被录取」接近 10。</li>
+<li><b>相关</b>（relevance）：和当前情境的语义相似度（用的是<a href="../rag/">RAG 那篇</a>讲过的向量相似度）。</li>
+</ul>
+<p>论文里三项各自归一化到 0–1，权重都设为 1，取得分最高、放得下窗口的那几条。试试看三项分数怎么影响结果：</p>
+<div class="demo" id="rt-demo">
+ <div class="demo-h"><b>小实验 ①：给记忆打分，取前三条</b><span class="badge">论文公式 · 示例记忆</span></div>
+ <div class="seg" id="rt-q"><button class="on">「周末给小林准备什么礼物？」</button><button>「晚饭吃什么？」</button></div>
+ <div class="seg" id="rt-w" style="margin-top:8px"><button>只看相关</button><button class="on">新近 + 重要 + 相关</button></div>
+ <div class="mem" id="rt-list"></div>
+ <p class="pipe-cap" id="rt-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 记忆内容、重要性分和相关度都是编的；打分公式（0.995 衰减、三项归一化后等权相加）来自论文。</p>
+</div>
+<p>论文还有一招叫<b>反思</b>：最近经历的重要性累计超过 150 分时，让模型回顾一下，提炼出更高层的结论（比如「小林最近压力很大」），作为新记忆存进去。居民们大约每天反思两三次。这相当于把一堆零碎记录「压缩」成观点，和上下文工程里的摘要是一个思路。</p>
+
+<h2 id="s4"><span class="k">04</span>记什么、忘什么</h2>
+<p>记得越多不一定越好。记了临时的事，以后会被它带偏；记了敏感的事，就多了一份隐私风险；事实变了没更新，就会「记错」。</p>
+<div class="demo" id="wr-demo">
+ <div class="demo-h"><b>小实验 ②：三种记忆策略，三个月后</b><span class="badge">示例对话</span></div>
+ <div class="seg" id="wr-p"><button class="on">什么都记</button><button>只记长期偏好</button><button>只记长期偏好 + 会更新</button></div>
+ <div class="mem" id="wr-list"></div>
+ <div class="verdict" id="wr-r"></div>
+ <p class="lbl">⚠️ 对话和结果是为说明问题编写的示例。</p>
+</div>
+<p>好的记忆系统要回答四个问题：<b>什么值得记</b>（长期、稳定、对以后有用的）、<b>新旧冲突怎么办</b>（以新的为准，并删掉旧的）、<b>用户能不能看到和删除</b>、<b>什么时候不该用</b>（比如用户开了临时模式）。这些更多是产品设计，而不是模型能力。</p>
+
+<h2 id="s5"><span class="k">05</span>子任务：多派几个人去干</h2>
+<p>记忆解决「记不住」，子任务解决「装不下」和「忙不过来」。主智能体（也叫编排者）把任务拆开，交给若干<b>子智能体</b>。每个子智能体有自己干净的上下文，读很多资料，只交回一份精简的结论。</p>
+<p>Anthropic 2025 年公开了他们的多智能体研究系统：一个 Claude Opus 4 主智能体带着几个 Claude Sonnet 4 子智能体并行搜索，在内部研究评测上比单个 Opus 4 智能体<b>好 90.2%</b>。他们分析发现，在 BrowseComp（找难找的网上信息）评测中，<b>光是用掉的 token 数量就能解释 80% 的表现差异</b>。换句话说，多智能体之所以强，很大程度上是因为它能「花更多 token」，而且是分散在多个窗口里花。</p>
+<p>代价也写得很清楚：智能体一般比普通聊天多用约 <b>4 倍</b> token，多智能体系统约 <b>15 倍</b>。</p>
+
+<h2 id="s6"><span class="k">06</span>什么时候值得分</h2>
+<div class="demo" id="sp-demo">
+ <div class="demo-h"><b>小实验 ③：分给几个子智能体？</b><span class="badge">玩具模型</span></div>
+ <div class="seg" id="sp-t"><button class="on">调研：比较 8 家公司的财报</button><button>编程：重构一个互相调用的模块</button></div>
+ <div class="temp-wrap" style="border:0;padding-top:0">
+  <div class="temp-row"><span>子智能体 <span class="temp-val" id="sp-nv">1</span> 个</span></div>
+  <input type="range" id="sp-n" min="1" max="8" value="1" aria-label="子智能体数">
+ </div>
+ <div class="kpis"><div class="kpi">耗时<b id="sp-time">—</b></div><div class="kpi">token 花费<b id="sp-tok">—</b></div><div class="kpi">结果质量<b class="ac" id="sp-q">—</b></div></div>
+ <p class="pipe-cap" id="sp-cap" style="min-height:3.4em"></p>
+ <p class="lbl">⚠️ 玩具模型，数字只表示趋势：调研类子任务互相独立，并行省时间；编程类子任务彼此依赖，分得越多，协调成本和冲突越大。这个定性结论来自 Anthropic 和 Cognition 的文章，具体数值是编的。</p>
+</div>
+<p>Anthropic 自己的总结：多智能体适合<b>价值高、能大量并行、信息量超过单个窗口</b>的任务；而需要所有人共享同一份上下文、彼此依赖多的任务，比如大多数编程任务，目前<b>不太适合</b>。</p>
+
+<h2 id="s7"><span class="k">07</span>分出去最怕各干各的</h2>
+<p>2025 年 6 月，做编程智能体 Devin 的 Cognition 公司发了一篇唱反调的文章《Don't Build Multi-Agents》（别搞多智能体）。他们举的例子是：让智能体做一个 Flappy Bird 小游戏，拆成「做背景」和「做小鸟」两个子任务。结果一个做了超级马里奥风格的背景，另一个做的小鸟风格完全不搭，拼不到一起。</p>
+<div class="demo" id="ho-demo">
+ <div class="demo-h"><b>小实验 ④：给子智能体交代多少</b><span class="badge">仿 Cognition 的例子</span></div>
+ <div class="seg" id="ho-m"><button class="on">只给一句子任务</button><button>给完整背景和已做的决定</button><button>不拆，一个智能体按顺序做</button></div>
+ <div class="ag" id="ho-g"></div>
+ <div class="verdict" id="ho-r"></div>
+</div>
+<p>他们提出两条原则：<b>共享上下文</b>，最好是完整的工作记录，而不只是一句任务；<b>每个动作都隐含着决定</b>，彼此冲突的决定会带来坏结果。所以要么让子智能体看到足够多的背景，要么干脆让一个智能体按顺序做，并用上下文压缩撑住长任务。</p>
+<p>两家的观点其实不矛盾：<b>互相独立的「查」可以分，彼此牵连的「做」尽量别分</b>。今天常见的折中是：子智能体只做读和搜索，把结论交回来，真正动手改东西的只有主智能体一个。</p>
+
+<h2 id="s8"><span class="k">08</span>记住这些就够了</h2>
+<ol class="keep">
+<li>智能体的长期记忆是<b>外部存储 + 检索</b>，读写记忆本身就是工具调用（MemGPT 的「内存/硬盘」比喻）。</li>
+<li>取记忆常看三项：<b>新近、重要、相关</b>。只看相关会漏掉要紧的新事。</li>
+<li>记忆要会<b>挑、改、删</b>，用户要能看到和关掉。</li>
+<li>子智能体用独立窗口干活、只交回结论。并行的调研很合适，代价约是聊天的 15 倍 token。</li>
+<li>拆分最怕各干各的：<b>共享足够的上下文</b>，彼此牵连的活尽量一个智能体做。</li>
+</ol>
+<div class="pn">
+ <a href="../plugins/"><small>← 上一篇</small>扩展与插件</a>
+ <a class="nx" href="../computer-use/"><small>下一篇 →</small>会用电脑的智能体</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Packer 等，<a href="https://arxiv.org/abs/2310.08560" rel="noopener">MemGPT: Towards LLMs as Operating Systems</a>（2023 年 10 月）。虚拟上下文管理。</li>
+<li>Park 等，<a href="https://arxiv.org/abs/2304.03442" rel="noopener">Generative Agents: Interactive Simulacra of Human Behavior</a>（2023 年 4 月）。25 个居民、记忆流、新近/重要/相关打分（0.995 衰减、等权）、反思阈值 150。</li>
+<li>OpenAI，<a href="https://openai.com/index/memory-and-new-controls-for-chatgpt/" rel="noopener">Memory and new controls for ChatGPT</a>（2024 年 2 月 13 日，含 2025 年 4 月 10 日更新）；帮助中心 <a href="https://help.openai.com/en/articles/8590148-memory-in-chatgpt" rel="noopener">Memory in ChatGPT</a>。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/engineering/multi-agent-research-system" rel="noopener">How we built our multi-agent research system</a>（2025 年 6 月）。90.2%、80% 方差、4 倍与 15 倍 token、编程任务不太适合。</li>
+<li>Walden Yan（Cognition），<a href="https://cognition.ai/blog/dont-build-multi-agents" rel="noopener">Don't Build Multi-Agents</a>（2025 年 6 月 12 日）。Flappy Bird 例子、两条原则。</li>
+</ol>
+<p class="note">本页实验里的记忆、对话和玩具模型数字都是虚构示例；实验 ① 的打分公式来自论文。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="memory.js?v=1"></script>
+</body>
+</html>

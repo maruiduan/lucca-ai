@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>上下文工程 · AI 是怎么回事 · lucca</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">

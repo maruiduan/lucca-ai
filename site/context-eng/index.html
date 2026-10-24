@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>上下文工程 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="上下文工程：智能体的上下文为什么越长越糊涂，以及记笔记、按需取、压缩、拆子任务四种应对办法。"><link rel="canonical" href="https://ai.lucca.top/context-eng/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="上下文工程 · AI 是怎么回事 · lucca"><meta property="og:description" content="上下文工程：智能体的上下文为什么越长越糊涂，以及记笔记、按需取、压缩、拆子任务四种应对办法。"><meta property="og:url" content="https://ai.lucca.top/context-eng/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+<style>
+.stack{display:flex;height:34px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--bg);margin:8px 0 4px;position:relative}
+.stack i{display:block;height:100%;transition:width .45s ease;min-width:0}
+.stack .lim{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55}
+.lg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--sub);margin:4px 0}
+.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+.k1{--c:#8a8476}.k2{--c:#2f6f8f}.k3{--c:#b0812a}.k4{--c:#4f7a4a}.k5{--c:#a33a2b}.k6{--c:#7a5aa0}
+.items{display:grid;gap:6px;margin:10px 0}
+.it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;font-size:14px;line-height:1.6;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);transition:opacity .3s,background .3s}
+.it .tg{font-size:11px;padding:0 7px;border-radius:999px;border:1px solid var(--line);color:var(--sub);margin-right:4px;white-space:nowrap}
+.it .tk{font:12px ui-monospace,monospace;color:var(--sub);white-space:nowrap}
+.it.gone{opacity:.32;text-decoration:line-through;text-decoration-color:var(--accent)}
+.it.sum{border-color:var(--blue);background:var(--blue-soft)}
+.it.key{border-left:3px solid var(--gold)}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.cards4 a{display:block;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);text-decoration:none;color:var(--ink);font-size:14px;line-height:1.6}
+.cards4 a b{display:block;font-size:16px;margin-bottom:2px}
+.cards4 a small{color:var(--sub)}
+@media (min-width:700px){.cards4{grid-template-columns:repeat(4,1fr)}}
+.chk{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 11 篇</span></nav>
+<article id="art">
+<h1>上下文工程：给智能体管好「眼前这页纸」</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 3 篇　|　约 15 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small>模型每一步只能看到上下文里的那些字。智能体一转起来，工具结果、聊天记录越堆越多：<strong>又贵、又慢、还会让它变糊涂</strong>。上下文工程就是每一步都替它决定<strong>放什么、丢什么、压成什么样</strong>。Anthropic 的说法是：找到<strong>最少、但信息量最高</strong>的那一组 token。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">10 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">从「写好提示词」到「管好上下文」</a></li>
+<li><a href="#s2">智能体的上下文是怎么被塞满的</a></li>
+<li><a href="#s3">越长越糊涂</a></li>
+<li><a href="#s4">四种办法：写、选、压、隔</a></li>
+<li><a href="#s5">压：快满了就做摘要</a></li>
+<li><a href="#s6">选：只带「索引」，用时再翻</a></li>
+<li><a href="#s7">写：把要紧的记在笔记里</a></li>
+<li><a href="#s8">工具结果要瘦身</a></li>
+<li><a href="#s9">隔：让子任务在干净的上下文里干活</a></li>
+<li><a href="#s10">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>从「写好提示词」到「管好上下文」</h2>
+<p>第一部分的<a href="../context/">第 4 篇</a>讲过三件事：模型<b>没有记忆</b>，每一轮都把整段上下文从头读一遍；上下文有<b>窗口上限</b>；比措辞更重要的是<b>往里面放什么</b>。那一篇说的主要是「一问一答」时怎么写提示词。</p>
+<p>到了智能体，情况变了。上一篇的循环每转一圈，就往上下文里追加一段想法和一段工具结果。一个修 bug 的任务可能转上百圈，读几十个文件、跑几十次命令。这时候问题不再是「提示词怎么写」，而是：<b>这么多东西，下一步该让模型看到哪些？</b></p>
+<p>2025 年，业界开始用「<b>上下文工程</b>」（context engineering）来叫这件事。Anthropic 在《Effective context engineering for AI agents》里的定义是：在模型每一次推理时，<b>挑选并维护最合适的一组 token</b>。它包括系统提示，也包括工具说明、外部数据、历史消息……所有会进入窗口的东西。而且它不是写一次就完事，<b>每一步都要重新挑</b>。</p>
+
+<h2 id="s2"><span class="k">02</span>智能体的上下文是怎么被塞满的</h2>
+<p>拖动下面的滑块，看一个编程智能体干活时，上下文里各部分怎么增长。每一圈它都要把<b>整段</b>重新读一遍，所以读过的 token 总数（也就是你付的钱）比窗口本身涨得快得多：</p>
+<div class="demo" id="bud-demo">
+ <div class="demo-h"><b>小实验 ①：上下文预算</b><span class="badge">示意数字</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>已经转了 <span class="temp-val" id="bud-nv">10</span> 圈</span><span id="bud-pct"></span></div>
+  <input type="range" id="bud-n" min="1" max="80" step="1" value="10" aria-label="循环圈数">
+ </div>
+ <div class="row"><button class="tgl" id="bud-trim">工具结果瘦身：关</button><button class="tgl" id="bud-cmp">快满时自动压缩：关</button></div>
+ <div class="stack" id="bud-bar"></div>
+ <div class="lg"><span class="k1">系统提示</span><span class="k2">工具说明书</span><span class="k3">项目说明</span><span class="k4">对话与想法</span><span class="k5">工具结果</span><span class="k6">摘要</span></div>
+ <div class="kpis"><div class="kpi">当前上下文<b id="bud-cur">—</b></div><div class="kpi">窗口上限<b>200K</b></div><div class="kpi">累计读过的 token<b class="ac" id="bud-tot">—</b></div></div>
+ <p class="pipe-cap" id="bud-cap" style="min-height:3.4em"></p>
+ <p class="lbl">⚠️ 示意数字：假设系统提示 3K、工具说明书 12K、项目说明 4K，每圈新增想法约 0.8K、工具结果约 6K（瘦身后约 1.5K）；窗口按 200K 算，压缩在 160K 时触发、压成 8K 摘要。真实系统差别很大，而且很多服务对重复出现的开头部分有缓存折扣，这里没算。</p>
+</div>
+<p>几个直观的结论：<b>工具结果是大头</b>；就算窗口没满，每一圈的成本也在变高；什么都不做，几十圈后就会撞上限。Anthropic 在讲多智能体研究系统时给过一组数字：在他们的数据里，智能体用的 token 大约是普通聊天的 <b>4 倍</b>，多智能体系统约 <b>15 倍</b>。</p>
+
+<h2 id="s3"><span class="k">03</span>越长越糊涂</h2>
+<p>窗口越来越大，几十万甚至上百万 token，那全塞进去不就好了？问题是：<b>放得下，不等于看得清</b>。</p>
+<p>2023 年斯坦福等机构的论文《Lost in the Middle》做了一个干净的实验：给模型 20 篇文档，只有一篇含答案，然后把这篇挪到不同位置。结果是一条 <b>U 形曲线</b>：答案在开头或结尾时最准，在中间时最差。拖动看看论文里 GPT-3.5-Turbo 的实测数据：</p>
+<div class="demo" id="lim-demo">
+ <div class="demo-h"><b>小实验 ②：答案藏在第几篇？</b><span class="badge">论文实测数据</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>含答案的文档放在第 <span class="temp-val" id="lim-v">10</span> / 20 篇</span></div>
+  <input type="range" id="lim-p" min="1" max="20" step="1" value="10" aria-label="答案位置">
+ </div>
+ <div id="lim-docs" style="display:flex;gap:3px;margin:8px 0"></div>
+ <svg id="lim-svg" viewBox="0 0 340 150" style="width:100%;height:auto;display:block" aria-label="答案位置与准确率的 U 形曲线"></svg>
+ <div class="kpis"><div class="kpi">这个位置的准确率<b class="ac" id="lim-acc">—</b></div><div class="kpi">一篇文档都不给（闭卷）<b>56.1%</b></div></div>
+ <p class="pipe-cap" id="lim-cap" style="min-height:3em"></p>
+ <p class="lbl">数据来自 Liu 等（2023）表 6：GPT-3.5-Turbo，20 篇文档的多文档问答，实测位置是第 1、5、10、15、20 篇（实心点），其余位置是连线估计（空心点）。新模型的曲线更平，但规律没有消失。</p>
+</div>
+<p>更新的研究也看到了类似现象。向量数据库公司 Chroma 在 2025 年的报告《Context Rot》（上下文腐烂）里测了 18 个模型，发现<b>输入越长，表现越不稳定</b>，即使任务本身很简单。Anthropic 把它比作人的工作记忆：模型有一份<b>「注意力预算」</b>，每多一个 token 就分走一点。第 1 篇讲过注意力是每个 token 去「看」其他所有 token，n 个 token 就有约 n² 对关系，越长越分散。</p>
+<p>所以实践上：<b>最要紧的放在开头或结尾</b>（比如任务要求在开头说一遍、结尾再提醒一遍），<b>不相关的别放进来</b>。</p>
+
+<h2 id="s4"><span class="k">04</span>四种办法：写、选、压、隔</h2>
+<p>LangChain 的一篇总结把常见做法归成四类，后面几节逐个讲：</p>
+<div class="cards4">
+ <a href="#s7"><b>✍️ 写</b>把要紧的事记到上下文<b style="display:inline;font-size:inherit">外面</b>（笔记、待办清单），需要时再读回来。<br><small>第 7 节</small></a>
+ <a href="#s6"><b>🔎 选</b>只把这一步用得上的拿进来：按需检索文件、资料、工具。<br><small>第 6 节</small></a>
+ <a href="#s5"><b>🗜️ 压</b>快满了就做摘要；旧的工具结果清掉或截短。<br><small>第 5、8 节</small></a>
+ <a href="#s9"><b>🧩 隔</b>把子任务交给另一个智能体，在干净的上下文里做，只交回结论。<br><small>第 9 节</small></a>
+</div>
+
+<h2 id="s5"><span class="k">05</span>压：快满了就做摘要</h2>
+<p>最常用的第一招是<b>压缩</b>（compaction）：上下文快满时，让模型把到目前为止的内容写成一份摘要，然后开一个新的上下文，只带着摘要继续干。Anthropic 介绍 Claude Code 的做法是：保留架构上的决定、没解决的 bug、实现细节，丢掉重复的工具输出，再附上最近读过的 5 个文件。</p>
+<p>难点在于<b>留什么、丢什么</b>。压得太狠，会丢掉一个当时看起来不起眼、后来才发现很要紧的细节。来试试：</p>
+<div class="demo" id="cmp-demo">
+ <div class="demo-h"><b>小实验 ③：给一段工作记录做压缩</b><span class="badge">示例记录</span></div>
+ <p class="lbl">一个智能体在帮你修「导出 Excel 时日期乱码」的 bug，已经做了 10 步。选一种压缩方式：</p>
+ <div class="row seg" id="cmp-mode"></div>
+ <div class="kpis"><div class="kpi">压缩前<b id="cmp-a">—</b></div><div class="kpi">压缩后<b class="ac" id="cmp-b">—</b></div><div class="kpi">省下<b id="cmp-c">—</b></div></div>
+ <div class="items" id="cmp-items"></div>
+ <p class="lbl" style="margin-bottom:2px">压缩完，它继续干。下一步它要决定怎么改：</p>
+ <div class="verdict" id="cmp-v"></div>
+ <p class="lbl">⚠️ 记录和 token 数是虚构的示例。黄色竖条标出的是「当时不起眼、后来很要紧」的细节。</p>
+</div>
+<p>Anthropic 给写压缩提示词的人的建议是：<b>先追求不漏</b>（宁可多留），<b>再慢慢追求精简</b>。而最安全、最轻的一种压缩，是只把<b>很久以前的工具原始结果清掉</b>：调用过了、结论已经写进后面的想法里，原文就没必要一直留着。</p>
+
+<h2 id="s6"><span class="k">06</span>选：只带「索引」，用时再翻</h2>
+<p>第 6 篇的 RAG 是「提问前先检索好，一次性贴进来」。智能体有了工具以后，多了一种做法：<b>即用即取</b>（just in time）。上下文里只放轻量的「索引」：文件路径、网页链接、查询语句；真需要时，再用工具去读，而且只读需要的那一段。</p>
+<div class="hscroll"><table class="t">
+<tr><th></th><th>开始就全放进去</th><th>即用即取</th></tr>
+<tr><td>做法</td><td>把 30 个可能相关的文件全贴进来</td><td>先看目录和文件名，搜关键词，只打开 3 个相关文件的相关部分</td></tr>
+<tr><td>占用</td><td>大，而且大多数用不上</td><td>小</td></tr>
+<tr><td>速度</td><td>开始就有，快</td><td>要多几步工具调用，慢一些</td></tr>
+<tr><td>风险</td><td>无关内容干扰判断（第 3 节）</td><td>可能漏找、走弯路</td></tr>
+</table></div>
+<p>这很像人：我们不会把整个硬盘背下来，而是靠文件夹、书签、搜索在需要时找到。文件名和目录结构本身就是线索：<code>tests/</code> 下面的文件和 <code>src/</code> 下面的同名文件，用途显然不同。Claude Code 用的是<b>混合</b>做法：项目说明文件一开始就放进来，其余代码靠搜索命令即用即取。</p>
+
+<h2 id="s7"><span class="k">07</span>写：把要紧的记在笔记里</h2>
+<p>上一篇模拟器里的「草稿本」就是这一招：让智能体<b>把进度和关键信息写到上下文外面的文件里</b>（比如一个 <code>NOTES.md</code> 或待办清单），上下文被压缩、甚至整个重开以后，再把笔记读回来接着干。</p>
+<div class="rawbox"><span class="dim"># NOTES.md（智能体自己写的笔记，示例）</span>
+<span class="sp">目标</span>：修复导出 Excel 时日期乱码
+<span class="sp">约束</span>：用户要求<span class="sys">不能改公开 API 的参数</span>
+<span class="sp">已确认</span>：问题在 export/date.py 第 88 行，时区被丢了
+<span class="sp">已试过</span>：改成 UTC → 测试 3 个失败（本地时间被改了），已撤回
+<span class="sp">下一步</span>：在格式化时带上时区；跑 tests/test_export.py</div>
+<p>Anthropic 举过一个例子：让 Claude 玩《宝可梦》时，它会自己记下「在 1 号道路已经练了 1234 步，皮卡丘离目标还差 2 级」，画出走过的地图、记下哪些招式对哪种对手有效。上下文重置后读回笔记，就能接着进行几个小时的长任务。笔记的好处是<b>便宜、可靠、人也看得懂</b>。跨对话、跨天的「长期记忆」是第 7 篇的话题。</p>
+
+<h2 id="s8"><span class="k">08</span>工具结果要瘦身</h2>
+<p>第 2 节里，工具结果是上下文的大头。一次搜索、一次跑测试，原样返回可能就是几千上万 token，而模型真正需要的往往只有几行。所以<b>设计工具时就要省</b>。Anthropic 提到，Claude Code 默认把单次工具返回限制在 <b>25,000 token</b> 以内。来给一个工具的返回结果瘦身：</p>
+<div class="demo" id="trim-demo">
+ <div class="demo-h"><b>小实验 ④：给工具返回结果瘦身</b><span class="badge">示例数据</span></div>
+ <p class="lbl">工具 <code>search_orders</code> 查「上个月没发货的订单」，原样返回了 50 条完整记录。打开下面的开关：</p>
+ <div class="chk" id="trim-sw"></div>
+ <div class="kpis"><div class="kpi">返回大小<b class="ac" id="trim-tk">—</b></div><div class="kpi">比原来少<b id="trim-pc">—</b></div></div>
+ <div class="rawbox" id="trim-out" style="max-height:260px"></div>
+ <p class="pipe-cap" id="trim-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 订单是虚构的；token 数按「每 4 个英文字符约 1 个 token」粗略估算。</p>
+</div>
+<p>常见的瘦身办法：<b>只返回需要的字段</b>，去掉内部编号、时间戳这类模型用不上的；<b>分页和截断</b>，并告诉模型还有多少条、怎么取下一页；<b>出错时给一句有用的提示</b>，而不是一整屏报错堆栈；对很长的日志，只返回开头、结尾和含 error 的行。</p>
+
+<h2 id="s9"><span class="k">09</span>隔：让子任务在干净的上下文里干活</h2>
+<p>最后一招是把活<b>分出去</b>：主智能体把一个子任务（比如「把这个代码库里所有用到日期格式化的地方找出来」）交给一个<b>子智能体</b>。子智能体在自己全新的上下文里搜索、阅读，可能用掉几万 token，但只交回一份 1000~2000 token 的结论。主智能体的上下文因此保持干净。</p>
+<p>Anthropic 的多智能体研究系统就是这么搭的：在他们的内部评测里，一个 Opus 4 主智能体带几个 Sonnet 4 子智能体，比单个 Opus 4 智能体<b>好 90.2%</b>；代价是 token 用量大约是普通聊天的 15 倍。什么时候值得这样分、子智能体之间怎么配合，留到第 7 篇「记忆与子任务」细讲。</p>
+
+<h2 id="s10"><span class="k">10</span>记住这些就够了</h2>
+<ol class="keep">
+<li>上下文工程 = 每一步替模型决定<b>放什么、丢什么、压成什么样</b>。目标是<b>最少、但信息量最高</b>的那组 token。</li>
+<li>上下文不是越多越好：<b>贵</b>（每圈都要重读）、<b>慢</b>，还会<b>越长越糊涂</b>，中间的信息最容易被忽略。</li>
+<li>四种办法：<b>写</b>（笔记）、<b>选</b>（即用即取）、<b>压</b>（摘要、清理旧工具结果）、<b>隔</b>（子任务）。压缩要先保证不漏关键约束。</li>
+<li>工具结果往往是大头，<b>设计工具时就要让它返回得少而准</b>。</li>
+</ol>
+<div class="pn">
+ <a href="../loop/"><small>← 上一篇</small>智能体循环</a>
+ <a class="nx" href="../mcp/"><small>下一篇 →</small>MCP</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Anthropic，<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" rel="noopener">Effective context engineering for AI agents</a>（2025 年 9 月）。定义、注意力预算、即用即取、压缩、结构化笔记、子智能体。</li>
+<li>Liu 等，<a href="https://arxiv.org/abs/2307.03172" rel="noopener">Lost in the Middle: How Language Models Use Long Contexts</a>（2023）。U 形曲线；小实验 ② 的数据来自其表 6。</li>
+<li>Chroma，<a href="https://research.trychroma.com/context-rot" rel="noopener">Context Rot: How Increasing Input Tokens Impacts LLM Performance</a>（2025）。测试了 18 个模型。</li>
+<li>LangChain，<a href="https://blog.langchain.com/context-engineering-for-agents/" rel="noopener">Context Engineering for Agents</a>（2025）。write / select / compress / isolate 四类。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/engineering/writing-tools-for-agents" rel="noopener">Writing effective tools for agents</a>（2025）。省 token 的工具设计；Claude Code 默认 25,000 token 上限。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/engineering/multi-agent-research-system" rel="noopener">How we built our multi-agent research system</a>（2025）。子智能体、90.2%、约 4 倍和 15 倍的 token 用量。</li>
+</ol>
+<p class="note">本页的上下文预算、工作记录、订单数据都是虚构示例，已在实验里标明；小实验 ② 用的是论文的实测数据。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="ce.js?v=1"></script>
+</body>
+</html>

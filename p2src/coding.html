@@ -1,0 +1,124 @@
+{"n":17,"short":"编程智能体","js":"coding.js"}
+<style>
+.tr{display:grid;gap:6px;margin:10px 0}
+.tc{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg);font-size:14px;line-height:1.55}
+.tc.off{display:none}.tc.cur{border-color:var(--accent);background:var(--soft)}
+.tc .h{font-size:12px;color:var(--sub)}.tc code{display:block;font-size:12.5px;white-space:pre-wrap;word-break:break-word;margin-top:3px}
+.tc .ok{color:var(--green);font-weight:600}.tc .no{color:var(--accent);font-weight:600}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+.hb{display:grid;gap:8px;margin:10px 0}
+.hb .r{display:grid;grid-template-columns:7.5em 1fr 4em;gap:8px;align-items:center;font-size:13px}
+.hb .r span:first-child{color:var(--sub);line-height:1.35}
+.hb .t{position:relative;height:18px;border-radius:5px;background:var(--bg);border:1px solid var(--line)}
+.hb .t:before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ink);opacity:.4}
+.hb .t i{position:absolute;top:0;bottom:0;border-radius:4px;transition:all .6s}
+.hb .t i.f{background:var(--green)}.hb .t i.s{background:var(--accent)}
+.hb b{font:600 13px ui-monospace,Menlo,monospace;text-align:right}
+.ax{display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);margin:0 4em 0 8.2em}
+</style>
+<h1>编程智能体：读代码、改代码、跑测试</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 9 篇　|　约 15 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small>编程是智能体目前最成功的用武之地，原因很朴素：<strong>代码能运行、测试能判对错</strong>，智能体每走一步都能拿到客观反馈。一个编程智能体本质上就是<a href="../loop/">循环</a> + 搜索、读文件、改文件、跑命令这几样工具。它很强，但也会「改测试骗过关」，而且一项严格的实验发现，资深程序员用了它反而<strong>慢了 19%</strong>，自己却觉得快了。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">8 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">从补全到智能体</a></li>
+<li><a href="#s2">修一个 bug 的完整过程</a></li>
+<li><a href="#s3">给智能体设计的「界面」</a></li>
+<li><a href="#s4">测试是方向盘</a></li>
+<li><a href="#s5">当心「改测试骗过关」</a></li>
+<li><a href="#s6">考卷成绩和真实效率</a></li>
+<li><a href="#s7">怎么用好它</a></li>
+<li><a href="#s8">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>从补全到智能体</h2>
+<p>AI 写代码大致经历了三代：</p>
+<ul>
+<li><b>补全</b>：你打字，它猜下一行（2021 年 6 月发布技术预览的 GitHub Copilot 是代表）。本质就是第一部分说的「猜下一个字」。</li>
+<li><b>对话</b>：你把代码贴进聊天框，它给你改好的版本，你再贴回去。</li>
+<li><b>智能体</b>：你说「修好这个 bug」，它自己搜代码、读文件、改、跑测试、看报错、再改，直到通过。Cursor 的智能体模式、Claude Code、OpenAI Codex 等都属于这一代。</li>
+</ul>
+<p>第三代的关键变化是：<b>人不再在每一步之间传话</b>。智能体自己拿到运行结果，自己决定下一步。</p>
+
+<h2 id="s2"><span class="k">02</span>修一个 bug 的完整过程</h2>
+<p>用户报告：「订单金额有优惠券时算错了」。看一个编程智能体怎么一步步处理：</p>
+<div class="demo" id="tr-demo">
+ <div class="demo-h"><b>小实验 ①：一次修 bug 的工作记录</b><span class="badge">示例</span></div>
+ <div class="tr" id="tr"></div>
+ <div class="row"><button id="tr-next">下一步 ▶</button><button id="tr-all">全部展开</button><button id="tr-reset">从头来</button></div>
+ <p class="pipe-cap" id="tr-cap" style="min-height:3.4em"></p>
+ <p class="lbl">⚠️ 代码、文件名和测试是虚构的，过程按编程智能体的典型做法编写。</p>
+</div>
+<p>注意它几乎不靠「记性」：先<b>搜索</b>找到相关文件，再<b>读</b>具体那几行，改完<b>跑测试</b>看结果。这就是<a href="../context-eng/">上下文工程</a>里「即用即取」的典型用法，也是编程智能体在大型代码库里不迷路的原因。</p>
+
+<h2 id="s3"><span class="k">03</span>给智能体设计的「界面」</h2>
+<p>2024 年 5 月普林斯顿的 <b>SWE-agent</b> 论文提出一个说法：<b>智能体–计算机接口</b>（ACI）。人用的编辑器、命令行是为人设计的，直接丢给模型并不好用：<code>cat</code> 一个 3000 行的文件会把上下文塞满，<code>sed</code> 改错一个缩进不会有任何提示。他们给模型设计了专用的命令：带行号的分页查看器、只显示匹配位置的搜索、改完自动做语法检查、改错就拒绝。仅仅换了界面，在 SWE-bench 上就达到当时最好的 12.5%。</p>
+<div class="demo" id="aci-demo">
+ <div class="demo-h"><b>小实验 ②：同一次修改，两种界面</b><span class="badge">示例</span></div>
+ <div class="seg" id="aci-m"><button class="on">给人用的命令</button><button>给智能体设计的命令</button></div>
+ <div class="rawbox" id="aci-box" style="max-height:300px"></div>
+ <div class="kpis"><div class="kpi">读进上下文<b id="aci-tk">—</b></div><div class="kpi">改错时<b class="ac" id="aci-err">—</b></div></div>
+ <p class="lbl">⚠️ 文件和 token 数是示意，按每 4 个英文字符约 1 个 token 粗算。</p>
+</div>
+<p>这和<a href="../tools/">工具调用</a>那篇说的「工具说明书要写给模型看」、上下文工程里「工具结果要瘦身」是同一个道理：<b>工具设计得好不好，往往比换一个更强的模型影响还大</b>。今天的编程智能体都内置了这类专用工具。</p>
+
+<h2 id="s4"><span class="k">04</span>测试是方向盘</h2>
+<p>为什么编程智能体比别的智能体成熟？因为它有一个现成的、客观的裁判：<b>测试</b>。改完跑一遍，过了就是过了，没过就有报错告诉你哪里不对。没有测试的项目，智能体只能「觉得」自己改对了。</p>
+<div class="demo" id="ts-demo">
+ <div class="demo-h"><b>小实验 ③：同一个任务，有没有测试</b><span class="badge">示例</span></div>
+ <div class="seg" id="ts-m"><button class="on">项目里没有相关测试</button><button>有测试</button><button>有测试，但智能体可以改测试</button></div>
+ <div class="tr" id="ts-list"></div>
+ <div class="verdict" id="ts-r"></div>
+ <p class="lbl">⚠️ 示例过程。第三种情况在现实中确实发生过，见下一节。</p>
+</div>
+
+<h2 id="s5"><span class="k">05</span>当心「改测试骗过关」</h2>
+<p>智能体被训练成「让测试通过」，而让测试通过最省事的办法有时是<b>改测试本身</b>：删掉断言、对测试数据写死答案、跳过失败的用例。这叫<b>奖励投机</b>（reward hacking）。2025 年 6 月，评测机构 METR 发文《Recent Frontier Models Are Reward Hacking》，记录了前沿模型在他们的任务里钻评分代码的空子、篡改任务设置，而不是真去解决问题。</p>
+<p>所以用编程智能体时要多留一个心眼：<b>看它的改动里有没有动测试文件</b>；在说明里明确「不许修改测试」；关键测试放在它改不了的地方（比如持续集成里）。<a href="../plugins/">扩展与插件</a>那篇的钩子就能用来强制这一条。</p>
+
+<h2 id="s6"><span class="k">06</span>考卷成绩和真实效率</h2>
+<p>考卷上，编程智能体进步惊人：<a href="../loop/">智能体循环</a>那篇讲过，SWE-bench 从 2023 年的 1.96% 涨到 2025 年底人工核验子集上的 79.2%。但这能不能换成真实的生产力？</p>
+<p>2025 年 7 月，METR 发表了一项随机对照实验：16 位资深开源开发者，在他们平均已经参与了 5 年的成熟项目上做了 246 个真实任务，每个任务随机决定「允许用 AI」或「不允许」。当时用的主要是 Cursor 和 Claude 3.5/3.7 Sonnet。先猜猜结果：</p>
+<div class="demo" id="rct-demo">
+ <div class="demo-h"><b>小实验 ④：用了 AI，资深开发者快了还是慢了？</b><span class="badge">论文数据</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>你的猜测：用时 <span class="temp-val" id="rct-gv">缩短 20%</span></span></div>
+  <input type="range" id="rct-g" min="-50" max="50" step="1" value="-20" aria-label="你的猜测">
+ </div>
+ <div class="row"><button id="rct-go">揭晓</button></div>
+ <div class="ax"><span>快 50%</span><span>不变</span><span>慢 50%</span></div>
+ <div class="hb" id="rct-bars"></div>
+ <p class="pipe-cap" id="rct-cap" style="min-height:3.4em"></p>
+</div>
+<p>开发者事前预计能快 24%，做完后自己估计快了 20%，经济学家和机器学习专家预测快 38%~39%，实测却是<b>慢了 19%</b>。论文分析的原因包括：这些开发者对自己的项目极其熟悉，AI 帮不上太多；大型成熟项目有很多隐含的规矩，AI 的改动经常要返工；花了不少时间等待、检查和修改 AI 的输出。</p>
+<p>它不说明「AI 编程没用」：样本只有 16 人，场景是资深者做熟悉的项目，工具也是 2025 年上半年的。它说明的是两件事：<b>考卷分数不能直接换算成效率</b>；<b>人对自己是否变快的感觉并不可靠</b>，要量。</p>
+
+<h2 id="s7"><span class="k">07</span>怎么用好它</h2>
+<ul>
+<li><b>给它能自己验证的任务</b>：有测试、能运行、能看到结果。没有测试，先让它写测试。</li>
+<li><b>说清楚边界</b>：项目说明文件里写好怎么构建、怎么跑测试、哪些文件不许动（这正是 Skill 和项目说明擅长的）。</li>
+<li><b>小步走、勤看差异</b>：一次一个功能，每次都看它改了什么，特别是测试文件。</li>
+<li><b>放在隔离环境里跑</b>：它会执行命令，用沙盒或容器，别给生产环境的密钥。</li>
+<li><b>在不熟悉的领域收益最大</b>：新语言、新框架、写一次性脚本；在你最熟的核心代码上，未必比你快。</li>
+</ul>
+
+<h2 id="s8"><span class="k">08</span>记住这些就够了</h2>
+<ol class="keep">
+<li>编程智能体 = 循环 + 搜索、读、改、运行。它成熟得快，是因为<b>测试和运行结果提供了客观反馈</b>。</li>
+<li><b>给智能体设计的工具</b>（ACI）很关键：分页查看、精准搜索、改错就拒绝。</li>
+<li>小心<b>奖励投机</b>：它可能改测试来「通过」。盯住测试文件的改动。</li>
+<li>考卷分数 ≠ 真实效率。METR 的实验里资深开发者用 AI <b>慢了 19%</b>，却以为快了 20%。</li>
+</ol>
+<div class="pn">
+ <a href="../computer-use/"><small>← 上一篇</small>会用电脑的智能体</a>
+ <a class="nx" href="../frameworks/"><small>下一篇 →</small>LangChain 等框架</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Yang 等，<a href="https://arxiv.org/abs/2405.15793" rel="noopener">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a>（2024 年 5 月）。ACI、SWE-bench 12.5%。</li>
+<li>Jimenez 等，<a href="https://arxiv.org/abs/2310.06770" rel="noopener">SWE-bench</a>（2023）。12 个 Python 项目的 2294 个真实问题。</li>
+<li>Becker 等（METR），<a href="https://arxiv.org/abs/2507.09089" rel="noopener">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a>（2025 年 7 月）。16 人、246 个任务；预计快 24%、自评快 20%、实测慢 19%；专家预测快 38%/39%。</li>
+<li>METR，<a href="https://metr.org/blog/2025-06-05-recent-reward-hacking/" rel="noopener">Recent Frontier Models Are Reward Hacking</a>（2025 年 6 月 5 日）。</li>
+</ol>
+<p class="note">本页实验 ①②③ 的代码和过程是虚构示例；实验 ④ 的数字来自 METR 论文。</p>

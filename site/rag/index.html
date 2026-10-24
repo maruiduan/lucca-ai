@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>RAG · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="RAG（检索增强生成）是什么：让模型先查资料再回答，切块、向量检索和引用是怎么配合的。"><link rel="canonical" href="https://ai.lucca.top/rag/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="RAG · AI 是怎么回事 · lucca"><meta property="og:description" content="RAG（检索增强生成）是什么：让模型先查资料再回答，切块、向量检索和引用是怎么配合的。"><meta property="og:url" content="https://ai.lucca.top/rag/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 6 篇</span></nav>
+<article id="art">
+<h1>RAG：先查资料再回答</h1>
+<p class="meta-line">第一部分 · 大模型本身 · 第 6 篇　|　约 13 分钟　|　3 个小实验</p>
+<div class="lead"><small>一句话结论</small>RAG（检索增强生成）就是让模型<strong>开卷考试</strong>：先从资料库里找出和问题最相关的几段，贴进提示词，再让它<strong>照着资料回答、注明出处</strong>。不用重新训练，模型就能用上最新的、私有的知识，也更少胡编。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">闭卷与开卷</a></li>
+<li><a href="#s2">整体流程：两个阶段</a></li>
+<li><a href="#s3">切块：资料要切成多大</a></li>
+<li><a href="#s4">找到相关的那几块</a></li>
+<li><a href="#s5">RAG 还是微调？</a></li>
+<li><a href="#s6">RAG 的坑</a></li>
+<li><a href="#s7">记住这些就够了</a></li>
+</ol></details>
+<h2 id="s1"><span class="k">01</span>闭卷与开卷</h2>
+<p>上一篇说到，模型凭「记忆」回答冷门问题时容易编。它的记忆还停在训练截止那天，更不可能知道你们公司的内部文件。那就别让它闭卷考：<b>把相关资料放到它眼前</b>。第 4 篇讲过，模型只根据上下文里的那串文字回答，所以只要把对的资料放进上下文，它就能照着答。</p>
+<p>这个思路在 2020 年由 Facebook AI（今 Meta）的研究者系统提出，并起名 <strong>RAG</strong>（Retrieval-Augmented Generation，检索增强生成）。今天聊天助手的「联网搜索」、企业的知识库问答、客服机器人，背后大多是这个结构。</p>
+
+<h2 id="s2"><span class="k">02</span>整体流程：两个阶段</h2>
+<p>RAG 分成「提前准备」和「现场回答」两段。点下面的步骤，或按播放：</p>
+<div class="demo pipe" id="flow-demo">
+ <div class="demo-h"><b>动画：一个问题在 RAG 里走一遍</b><span class="badge">示意图</span></div>
+ <svg id="flow" viewBox="0 0 360 430" role="img" aria-label="RAG 流程图" style="max-width:520px;margin:0 auto"></svg>
+ <div class="dots" id="flow-dots"></div>
+ <p class="pipe-cap" id="flow-cap"></p>
+ <div class="row"><button class="pri" id="flow-play">▶ 播放</button><button id="flow-next">下一步</button></div>
+</div>
+
+<h2 id="s3"><span class="k">03</span>切块：资料要切成多大</h2>
+<p>资料往往很长，不能整本塞进上下文，所以先切成一小块一小块（chunk），检索时只取最相关的几块。块的大小是个取舍：</p>
+<ul>
+<li><b>太大</b>：一块里混着很多无关内容，占地方，也会干扰模型；</li>
+<li><b>太小</b>：一句话被拦腰切断，单独拿出来看不懂（「它每次最多 4 小时」，「它」是谁？）。</li>
+</ul>
+<div class="demo" id="chk-demo">
+ <div class="demo-h"><b>小实验 ①：给一篇通知切块</b><span class="badge">示例文档</span></div>
+ <div class="row seg" id="chk-mode"></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:4px" id="chk-sz-wrap">
+  <div class="temp-row"><span>每块最多 <span class="temp-val" id="chk-v">60</span> 个字</span><span id="chk-n"></span></div>
+  <input type="range" id="chk-sz" min="20" max="200" step="10" value="60" aria-label="块大小">
+ </div>
+ <div id="chk-out"></div>
+ <p class="lbl" id="chk-cap"></p>
+</div>
+<p>实践里常见的改进：按段落或句子切、相邻块之间留一点重叠；Anthropic 在 2024 年还提出给每一块加一句「这块在讲什么」的说明再存，让检索准确率明显提高。</p>
+
+<h2 id="s4"><span class="k">04</span>找到相关的那几块</h2>
+<p>怎么从成千上万块里找出相关的？第 1 篇讲过<b>向量</b>：意思相近的文字，向量也靠得近。RAG 用一个专门的「向量化模型」（embedding model）把每一块都变成向量存起来；提问时，把问题也变成向量，找离它最近的几块。</p>
+<p>另一种老办法是<b>关键词搜索</b>：看问题和资料共享了多少词。它对人名、型号、编号这类精确词很准，却不懂同义词：问「能带狗吗」，搜不到写着「宠物不得入内」的那块。所以很多系统把两种方法结合起来用。</p>
+<div class="demo" id="rag-demo">
+ <div class="demo-h"><b>小实验 ②：给模型配一个资料库</b><span class="badge">玩具检索 + 示意回答</span></div>
+ <p class="lbl">资料库：虚构的「青石镇图书馆须知」，共 8 块。选一个问题：</p>
+ <div class="row seg" id="rg-q"></div>
+ <div class="row"><button class="tgl on" id="rg-on">RAG：开</button><button class="tgl" id="rg-sem">「懂意思」：关</button></div>
+ <div id="rg-hits"></div>
+ <div class="lbl" id="rg-plbl">拼好送进模型的提示词：</div>
+ <div class="rawbox" id="rg-prompt"></div>
+ <div class="msg b" id="rg-ans" style="max-width:100%"></div>
+ <p class="lbl">⚠️ 玩具：检索按「问题和资料共享多少个相邻两字」算相似度（相当于简化的关键词搜索）；打开「懂意思」会先用一张小同义词表把「狗」换成「宠物」等，模拟向量检索懂得近义词的效果。回答由程序从命中的资料里摘取，用来示意「照着资料答」；关掉 RAG 时的回答是我们手写的典型幻觉。</p>
+</div>
+
+<h2 id="s5"><span class="k">05</span>RAG 还是微调？</h2>
+<p>想让模型「懂」你的资料，另一条路是用这些资料去<b>微调</b>它（第 3 篇的方法）。两者擅长的事不一样：</p>
+<div class="hscroll"><table class="t">
+<tr><th></th><th>RAG（开卷）</th><th>微调（改参数）</th></tr>
+<tr><td>资料更新</td><td>改资料库就行，马上生效</td><td>要重新训练</td></tr>
+<tr><td>能否给出处</td><td>能，指出用了哪几块</td><td>难，知识混在参数里</td></tr>
+<tr><td>权限控制</td><td>容易：只检索这个人能看的资料</td><td>难</td></tr>
+<tr><td>改变语气、格式、行为</td><td>一般</td><td>擅长</td></tr>
+<tr><td>额外成本</td><td>每次提问多一步检索、提示更长</td><td>训练成本，模型要维护</td></tr>
+</table></div>
+<p>一个常用的经验：<b>要它「知道」新东西，用 RAG；要它「换个做法」，用微调</b>。两者也可以一起用。</p>
+
+<h2 id="s6"><span class="k">06</span>RAG 的坑</h2>
+<ul>
+<li><b>检索错了，答案就错</b>：找来的块不相关，模型可能照着错的资料一本正经地答。所以检索的质量往往决定一切。</li>
+<li><b>资料本身有错或互相矛盾</b>：垃圾进，垃圾出。</li>
+<li><b>模型仍可能越出资料</b>：所以提示里要写明「只根据资料回答，没有就说不知道」，并给出处方便核对。</li>
+<li><b>上下文越塞越长</b>：第 4 篇讲过，中间的信息容易被忽略，块不是越多越好。</li>
+</ul>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li>RAG = <b>先检索、再生成</b>：资料切块、变成向量存好；提问时找出最相关的几块，贴进提示，让模型照着答。</li>
+<li>它让模型用上<b>最新、私有</b>的知识，能<b>给出处</b>，不用重新训练；要改语气和行为，才考虑微调。</li>
+<li>检索质量决定答案质量。好的 RAG 会要求模型<b>只按资料回答、没有就说不知道</b>。</li>
+</ol>
+<div class="pn">
+ <a href="../hallucination/"><small>← 上一篇</small>幻觉与局限</a>
+ <a class="nx" href="../reasoning/"><small>下一篇 →</small>推理模型</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Lewis 等，<a href="https://arxiv.org/abs/2005.11401" rel="noopener">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>（2020）。RAG 的提出。</li>
+<li>Gao 等，<a href="https://arxiv.org/abs/2312.10997" rel="noopener">Retrieval-Augmented Generation for Large Language Models: A Survey</a>（2023）。切块、检索、生成各环节综述。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/news/contextual-retrieval" rel="noopener">Introducing Contextual Retrieval</a>（2024）。给块加上下文说明、向量与关键词（BM25）结合。</li>
+<li>OpenAI，<a href="https://platform.openai.com/docs/guides/embeddings" rel="noopener">Embeddings 指南</a>。向量化模型与相似度搜索。</li>
+<li>Liu 等，<a href="https://arxiv.org/abs/2307.03172" rel="noopener">Lost in the Middle</a>（2023）。</li>
+</ol>
+<p class="note">本页的资料库、通知和「关掉 RAG」时的回答都是虚构示例；检索是简化的玩具算法，已在实验里标明。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="rag.js?v=3"></script>
+</body>
+</html>

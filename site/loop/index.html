@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>智能体循环 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="智能体循环：AI 智能体怎样想一步、做一步，遇到工具出错或结果不对时如何发现问题并改计划。"><link rel="canonical" href="https://ai.lucca.top/loop/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="智能体循环 · AI 是怎么回事 · lucca"><meta property="og:description" content="智能体循环：AI 智能体怎样想一步、做一步，遇到工具出错或结果不对时如何发现问题并改计划。"><meta property="og:url" content="https://ai.lucca.top/loop/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+<style>
+.lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 4px}
+.sc{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:8px 11px;font-size:14.5px;line-height:1.7;animation:fin .35s ease}
+.sc small{display:block;font-size:11.5px;color:var(--sub);margin-bottom:2px}
+.sc.th{border-style:dashed}.sc.act{border-color:var(--accent)}.sc.obs{border-color:var(--blue)}.sc.err{border-color:var(--accent);background:var(--soft)}.sc.end{border-color:var(--green);border-width:2px}.sc.stop{border-color:var(--gold);background:var(--gold-soft)}
+.sc pre{margin:4px 0 0;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+@keyframes fin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.sc{animation:none}}
+.slog{display:flex;flex-direction:column;gap:8px;margin:10px 0;max-height:440px;overflow:auto;padding-right:2px}
+.pad{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:8px 11px;margin:10px 0;font-size:14px;line-height:1.7}
+.pad h4{margin:0 0 4px;font-size:13px;color:var(--sub);font-weight:600}
+.pad ul{list-style:none;padding:0!important;margin:0}
+.pad li{margin:2px 0;padding-left:22px;position:relative}
+.pad li:before{content:"○";position:absolute;left:2px;color:var(--sub)}
+.pad li.ok:before{content:"✓";color:var(--green);font-weight:700}
+.pad li.x:before{content:"!";color:var(--accent);font-weight:700}
+.pad .facts li:before{content:"·"}
+.meter{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
+.meter i{width:22px;height:10px;border-radius:3px;background:var(--line)}
+.meter i.u{background:var(--accent)}
+.flowbox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0;font-size:13.5px}
+.flowbox span{padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--bg)}
+.flowbox span.hot{border-color:var(--accent);background:var(--soft)}
+.flowbox span.bad{border-color:var(--accent);color:var(--accent);text-decoration:line-through}
+.flowbox em{color:var(--sub);font-style:normal}
+#wf-demo table.t{min-width:0;width:100%}#wf-demo table.t td:first-child{white-space:nowrap}
+@media (min-width:900px){.simg{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;align-items:start}.simg .pad{position:sticky;top:60px;margin-top:10px}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 10 篇</span></nav>
+<article id="art">
+<h1>智能体循环：想一步，做一步</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 2 篇　|　约 15 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small>上一篇的工具调用是「问一次、用一次工具、答一次」。把它放进一个<strong>循环</strong>：模型想下一步做什么 → 调用工具 → 看结果 → 再想，一直转到任务完成，它就成了<strong>智能体</strong>（agent）。难点不在循环本身，而在<strong>什么时候停</strong>、<strong>出错了怎么办</strong>，以及<strong>这件事到底需不需要智能体</strong>。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">9 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">从一次调用到一个循环</a></li>
+<li><a href="#s2">循环长什么样</a></li>
+<li><a href="#s3">ReAct：边想边做</a></li>
+<li><a href="#s4">动手：看一个智能体干活</a></li>
+<li><a href="#s5">先列计划，边做边改</a></li>
+<li><a href="#s6">什么时候停，卡住了怎么办</a></li>
+<li><a href="#s7">工作流还是智能体</a></li>
+<li><a href="#s8">真实的智能体能做到哪一步</a></li>
+<li><a href="#s9">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>从一次调用到一个循环</h2>
+<p>上一篇里，问「首尔现在多少度」，模型调一次天气工具就能回答。但很多事一次做不完。比如：</p>
+<div class="box">「这周六我想下午去南山塔看日落，帮我算一下几点从公司出发，别淋雨。」</div>
+<p>要回答它，至少得：查周六的天气 → 查日落时间 → 查从公司到南山塔要多久 → 倒推出发时间。而且<b>每一步做什么，要看上一步的结果</b>：如果周六下午一直下雨，后面就不用算了，得建议改天。这种事没法提前写死，只能<b>走一步看一步</b>。</p>
+<p>做法很直接：程序不在第一次工具结果回来后就结束，而是<b>一直把结果交回去、再叫模型</b>，直到模型自己说「做完了」。Anthropic 在 2024 年的文章《Building effective agents》里给智能体下的定义就很朴素：<b>在循环里根据环境的反馈使用工具的大模型</b>。人工智能教科书里的「智能体」也是这个意思：能感知环境、并采取行动去达成目标的东西。</p>
+
+<h2 id="s2"><span class="k">02</span>循环长什么样</h2>
+<p>把一个智能体拆开，只有四个动作在转圈。点步骤或按播放：</p>
+<div class="demo pipe" id="cyc-demo">
+ <div class="demo-h"><b>动画：智能体循环</b><span class="badge">示意图</span></div>
+ <svg id="cyc" viewBox="0 0 360 330" role="img" aria-label="智能体循环示意图" style="max-width:460px;margin:0 auto"></svg>
+ <div class="dots" id="cyc-dots"></div>
+ <p class="pipe-cap" id="cyc-cap"></p>
+ <div class="row"><button class="pri" id="cyc-play">▶ 播放</button><button id="cyc-next">下一步</button></div>
+</div>
+<p>写成程序，核心其实只有几行（这是示意，不是哪个产品的源码）：</p>
+<div class="rawbox"><span class="dim">// 智能体的核心：一个循环</span>
+上下文 = [系统提示, 工具说明书, 用户的任务]
+<span class="sp">重复</span>，最多 N 步：
+    回复 = 模型(上下文)                 <span class="dim">// 想</span>
+    <span class="sp">如果</span> 回复里没有工具调用：
+        <span class="sp">结束</span>，把回复交给用户         <span class="dim">// 模型认为做完了</span>
+    结果 = 执行(回复里的工具调用)       <span class="dim">// 做</span>
+    上下文 += 回复 + 结果               <span class="dim">// 看</span>
+<span class="sp">步数用完</span>：停下，告诉用户做到了哪</div>
+<p>注意两件事。第一，<b>决定下一步做什么的是模型</b>，不是程序员提前写好的流程，这是智能体和普通程序最大的区别。第二，每转一圈，上下文就长一截：工具结果、模型的想法都堆进去，所以长任务很快会把上下文塞满。怎么管这些上下文，是下一篇<a href="../context-eng/">「上下文工程」</a>的主题。</p>
+
+<h2 id="s3"><span class="k">03</span>ReAct：边想边做</h2>
+<p>2022 年，普林斯顿和 Google 的研究者发表了 <b>ReAct</b>（Reasoning + Acting，推理加行动），把这个循环的写法定了下来：让模型每一步先写一句<b>想法</b>（Thought），再写一个<b>行动</b>（Action），然后程序把<b>观察</b>（Observation）贴回来。一段典型的记录长这样：</p>
+<div class="rawbox"><span class="sys">想法 1：</span>要避开下雨，先查周六首尔的逐小时天气。
+<span class="sp">行动 1：</span>get_weather(city="首尔", day="周六")
+<span class="dim">观察 1：上午有雨，14:00 后转晴。</span>
+<span class="sys">想法 2：</span>下午可以去。看日落要知道日落时间。
+<span class="sp">行动 2：</span>get_sunset(city="首尔", day="周六")
+<span class="dim">观察 2：日落 17:52。</span>
+<span class="sys">想法 3：</span>还要知道路上多久……</div>
+<p>为什么要多写一句「想法」？论文对比了三种做法：</p>
+<div class="hscroll"><table class="t">
+<tr><th></th><th>只想不做</th><th>只做不想</th><th>ReAct：边想边做</th></tr>
+<tr><td>做法</td><td>思维链（第 7 篇），全凭记忆推理</td><td>直接连着调工具</td><td>想一句、做一步、看结果</td></tr>
+<tr><td>问题</td><td>事实靠记忆，容易编</td><td>不知道为什么做，结果不对也不会调整</td><td>步骤更多，更慢更贵</td></tr>
+<tr><td>好处</td><td>快</td><td>事实来自工具</td><td>事实可靠，计划能随结果调整，人也看得懂它为什么这么做</td></tr>
+</table></div>
+<p>今天的产品不一定逐字写出「想法 1、行动 1」，推理模型会在内部先想（第 7 篇），但「想 → 做 → 看」这个骨架几乎所有智能体都在用。</p>
+
+<h2 id="s4"><span class="k">04</span>动手：看一个智能体干活</h2>
+<p>下面这个智能体有 4 个工具：查天气、查日落、查路程、计算器。它要完成上面那个南山塔的任务。右边（手机上是下面）的<b>草稿本</b>是它记下的计划和已知事实。你可以改<b>最多几步</b>，也可以给它制造麻烦：</p>
+<div class="demo" id="ag-demo">
+ <div class="demo-h"><b>小实验 ①：智能体循环模拟器</b><span class="badge">离线演示 · 剧本预先写好</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>最多 <span class="temp-val" id="ag-bv">8</span> 步（每调用一次工具算一步）</span></div>
+  <input type="range" id="ag-b" min="2" max="10" step="1" value="8" aria-label="步数上限">
+ </div>
+ <p class="lbl" style="margin:6px 0 4px">制造一个麻烦：</p>
+ <div class="row seg" id="ag-f"></div>
+ <div class="simg">
+  <div><div class="slog" id="ag-log" aria-live="polite"></div></div>
+  <div class="pad" id="ag-pad"></div>
+ </div>
+ <div class="row"><button class="pri" id="ag-next">下一步</button><button id="ag-all">直接看完</button><button id="ag-reset">重来</button></div>
+ <p class="lbl">⚠️ 这是演示，不连网也不连真模型。每一步的想法、工具结果都是按真实智能体的样子预先写好的剧本，天气、日落、路程数据是虚构的。</p>
+</div>
+<p>多试几种：</p>
+<ul>
+<li><b>没麻烦、8 步</b>：4 次工具调用就完成，第 5 轮模型不再调工具，循环自然结束；</li>
+<li><b>步数调到 3</b>：还没查路程就被叫停。好的智能体会<b>老实说做到了哪、还差什么</b>，而不是假装做完；</li>
+<li><b>「工具超时」</b>：它重试一次就好了，多花一步；</li>
+<li><b>「结果不对劲」</b>：路程工具查成了釜山的南山，要 4 个多小时。它<b>对照常识发现不对</b>，换个说法重查；</li>
+<li><b>「一直失败」</b>：同一个错误连着出现两次，它判断自己卡住了，停下来问你，而不是把步数耗光。</li>
+</ul>
+
+<h2 id="s5"><span class="k">05</span>先列计划，边做边改</h2>
+<p>任务一长，走一步看一步容易「走偏」：查着查着忘了最初要干什么。常见的改进是<b>先列计划</b>：开始前把任务拆成几步写下来，每做完一步打个勾。模拟器里的草稿本就是这个作用。2023 年的 <b>Plan-and-Solve</b> 等研究发现，先让模型列出计划再执行，能减少漏步骤的错误；今天的编程智能体也常在界面上显示一张待办清单（to-do list），边做边勾。</p>
+<p>但计划不是写死的。<b>观察到意外情况，就要改计划</b>：如果天气工具说周六全天下雨，「查日落」「查路程」都不必做了，计划应该改成「告诉用户周六不合适，建议周日」。能根据结果调整计划，正是智能体和固定流程的区别。另一种常见技巧是<b>反思</b>（Reflexion 论文）：一次尝试失败后，让模型写一句「哪里错了、下次怎么改」，带着这句话再试。</p>
+
+<h2 id="s6"><span class="k">06</span>什么时候停，卡住了怎么办</h2>
+<p>循环最怕两件事：<b>停不下来</b>，和<b>停得太早</b>。实际系统通常同时设好几道闸：</p>
+<ol class="steps">
+<li><b>模型说做完了</b>：回复里不再有工具调用。这是正常结束，但模型也可能过早宣布完成，所以重要任务要有检查（比如编程智能体最后跑一遍测试）。</li>
+<li><b>步数上限</b>：最多转 N 圈，防止无限循环。到了上限要如实汇报进度。</li>
+<li><b>花费和时间上限</b>：每一圈都要调用一次模型，长任务的费用会一路累加。</li>
+<li><b>卡住检测</b>：同样的调用、同样的错误反复出现，就该停下换方法或问人。</li>
+<li><b>人来把关</b>：付款、发消息、删除之类的动作，先停下等人确认。</li>
+</ol>
+<p>为什么长任务这么难？因为<b>错误会累积</b>。假设每一步有 95% 的把握做对，看起来很高，但一个任务要连着做对 20 步，全部做对的机会只有 0.95²⁰ ≈ 36%。拖动下面的滑块感受一下：</p>
+<div class="demo" id="cp-demo">
+ <div class="demo-h"><b>小实验 ②：每步都靠谱，整件事呢？</b><span class="badge">简单的乘法</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>每一步做对的概率 <span class="temp-val" id="cp-pv">95%</span></span></div>
+  <input type="range" id="cp-p" min="80" max="99.9" step="0.1" value="95" aria-label="每步成功率">
+  <div class="temp-row" style="margin-top:8px"><span>任务一共 <span class="temp-val" id="cp-nv">20</span> 步</span></div>
+  <input type="range" id="cp-n" min="1" max="100" step="1" value="20" aria-label="步数">
+ </div>
+ <div class="kpis"><div class="kpi">全部做对的概率<b class="ac" id="cp-r">36%</b></div><div class="kpi">每步出错后能自己发现并改正一半<b id="cp-r2">—</b></div></div>
+ <svg id="cp-svg" viewBox="0 0 340 130" style="width:100%;height:auto;display:block" aria-label="成功率随步数下降的曲线"></svg>
+ <p class="lbl">⚠️ 这是简化模型：假设每一步独立、出错就失败。第二个数字假设一步出错后，有一半机会被智能体自己发现并改正（比如跑测试发现失败）。它说明了为什么「能发现并改正错误」对智能体这么重要。</p>
+</div>
+<p>这也解释了模拟器里「结果不对劲」那一幕的价值：<b>智能体强不强，很大程度上看它能不能发现自己错了</b>。</p>
+
+<h2 id="s7"><span class="k">07</span>工作流还是智能体</h2>
+<p>听起来智能体很厉害，是不是什么事都该交给它？Anthropic 那篇文章给出的建议恰恰相反：<b>先找最简单的办法，只有在需要的时候才增加复杂度</b>。它把用大模型搭的系统分成两类：</p>
+<ul>
+<li><b>工作流</b>（workflow）：步骤由人提前用代码写好，模型只负责其中某几步。比如「先翻译 → 再检查术语 → 再排版」。</li>
+<li><b>智能体</b>（agent）：由模型自己决定下一步做什么、用什么工具、做几步。</li>
+</ul>
+<p>文章列举了几种常见的工作流：<b>串联</b>（一步的输出接下一步）、<b>分流</b>（先判断类型，交给对应的处理流程）、<b>并行</b>（几件事同时做再汇总）、<b>主管分派</b>（一个模型拆任务、分给几个模型做）、<b>写了再评</b>（一个写、一个挑毛病、反复改）。选一个任务，对比两种做法：</p>
+<div class="demo" id="wf-demo">
+ <div class="demo-h"><b>小实验 ③：这件事该用哪种？</b><span class="badge">示意对比</span></div>
+ <div class="row seg" id="wf-t"></div>
+ <div class="lbl" style="margin-top:8px">工作流（人写好的固定步骤）</div>
+ <div class="flowbox" id="wf-a"></div>
+ <div class="lbl">智能体（模型自己决定）</div>
+ <div class="flowbox" id="wf-b"></div>
+ <div class="hscroll"><table class="t" id="wf-tab"></table></div>
+ <p class="pipe-cap" id="wf-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 步数和花费是示意的相对值，用来说明取舍，不是某个产品的实测。</p>
+</div>
+<p>一个经验法则：<b>步骤能提前说清楚的，用工作流</b>，更快、更便宜、更好排查；<b>步骤说不清、要看情况随机应变的</b>，比如修一个原因未知的 bug、做一份要不断跟着线索走的调研，才值得用智能体。很多好产品是两者混用：大框架是工作流，某一步里放一个小智能体。</p>
+
+<h2 id="s8"><span class="k">08</span>真实的智能体能做到哪一步</h2>
+<h3>编程智能体</h3>
+<p>Cursor、Claude Code、OpenAI Codex 这类工具，就是「循环 + 读文件、改文件、运行命令」这几个工具。它们特别适合做智能体，因为编程有现成的<b>反馈</b>：代码能不能运行、测试过没过，都是客观的观察结果，错了马上知道。衡量它们的常用考题是 <b>SWE-bench</b>：从真实开源项目里挑出已经被人修好的问题，让 AI 去修，再用项目自己的测试来判对错。2023 年论文发表时，最好的模型（Claude 2）只能解决 1.96%；到 2025 年 12 月，SWE-bench 官方排行榜上，人工核验过的 500 题子集（Verified）最好成绩是 79.2%，而在没有筛选过的完整 2294 题上，最好成绩约 53%（52.6%）。题目越「原汁原味」，分数越低。第 9 篇会专门讲。</p>
+<h3>深度研究</h3>
+<p>2025 年起，OpenAI、Google 等都推出了「深度研究」（Deep Research）：给一个问题，它会自己搜索几十上百个网页，一边读一边决定下一步搜什么，几分钟到半小时后交出一份带引用的报告。它本质上就是本篇的循环，工具换成了「搜索」和「打开网页」，也就是把第 6 篇的 RAG 放进了循环。</p>
+<h3>老实说，局限在哪</h3>
+<ul>
+<li><b>任务越长越难</b>：研究机构 METR 在 2025 年测量了 AI 能独立完成多长的任务（按人类专家需要的时间算）。结论是这个长度从 2019 年起大约每 7 个月翻一番（2024 年后可能更快）。当时最强的 o3，能以一半的把握完成专家要花约 110 分钟的软件任务；但如果要求 8 成把握，能做的任务长度只有它的 1/4 到 1/6。而且任务越「乱」（没有清楚的反馈、要自己去找信息），表现越差。</li>
+<li><b>会自信地交错答案</b>：深度研究的报告可能引用了不可靠的网页，或把引用和结论对错位置；OpenAI 自己也提醒它会出现幻觉。重要结论要点开出处核对。</li>
+<li><b>贵、慢</b>：一次深度研究可能调用模型上百次。</li>
+<li><b>会被带偏</b>：它会读网页、读文件，里面藏的指令可能劫持它（提示注入）。第 11 篇专门讲。</li>
+</ul>
+<p>所以现在最靠谱的用法是：<b>让智能体做苦力，人来定方向和验收</b>。</p>
+
+<h2 id="s9"><span class="k">09</span>记住这些就够了</h2>
+<ol class="keep">
+<li>智能体 = <b>大模型 + 工具 + 循环</b>：想下一步 → 调用工具 → 看结果 → 再想，直到模型认为做完了。下一步做什么由模型决定。</li>
+<li><b>ReAct</b>（边想边做）让事实来自工具、计划能随结果调整；先<b>列计划</b>、遇到意外就<b>改计划</b>。</li>
+<li>必须设好<b>停止条件</b>：步数、花费、卡住检测、危险动作先问人。步骤越多错误越容易累积，<b>能发现并改正错误</b>是关键。</li>
+<li>能提前写清步骤的，用更简单的<b>工作流</b>；只有需要随机应变时才用智能体。</li>
+</ol>
+<div class="pn">
+ <a href="../tools/"><small>← 上一篇</small>工具调用</a>
+ <a class="nx" href="../context-eng/"><small>下一篇 →</small>上下文工程</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Anthropic，<a href="https://www.anthropic.com/research/building-effective-agents" rel="noopener">Building effective agents</a>（2024）。智能体的定义、五种工作流、「先用最简单的办法」。</li>
+<li>Yao 等，<a href="https://arxiv.org/abs/2210.03629" rel="noopener">ReAct: Synergizing Reasoning and Acting in Language Models</a>（2022）。想法—行动—观察。</li>
+<li>Wang 等，<a href="https://arxiv.org/abs/2305.04091" rel="noopener">Plan-and-Solve Prompting</a>（2023）。先列计划再执行。</li>
+<li>Shinn 等，<a href="https://arxiv.org/abs/2303.11366" rel="noopener">Reflexion: Language Agents with Verbal Reinforcement Learning</a>（2023）。失败后写反思再试。</li>
+<li>Lilian Weng，<a href="https://lilianweng.github.io/posts/2023-06-23-agent/" rel="noopener">LLM Powered Autonomous Agents</a>（2023）。规划、记忆、工具三部分的经典综述。</li>
+<li>Jimenez 等，<a href="https://arxiv.org/abs/2310.06770" rel="noopener">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a>（2023）。Claude 2 解决 1.96%。以及 <a href="https://www.swebench.com/" rel="noopener">SWE-bench 官方排行榜</a>（2026 年 10 月查阅：Verified 最高 79.2%，完整测试集最高 52.6%，均为 2025 年 12 月的成绩）。</li>
+<li>OpenAI，<a href="https://openai.com/index/introducing-deep-research/" rel="noopener">Introducing deep research</a>（2025）。含局限说明。</li>
+<li>METR（Kwa 等），<a href="https://arxiv.org/abs/2503.14499" rel="noopener">Measuring AI Ability to Complete Long Software Tasks</a>（2025），及 <a href="https://metr.org/blog/2025-03-19-measuring-ai-ability-to-complete-long-tasks/" rel="noopener">METR 博客解读</a>。翻倍时间约 7 个月（207 天）；o3 的 50% 时间跨度约 110 分钟；80% 时间跨度短 4~6 倍。</li>
+<li>Russell &amp; Norvig，《人工智能：一种现代方法》。「智能体」的经典定义。</li>
+</ol>
+<p class="note">本页的南山塔任务、天气、日落和路程数据都是虚构示例；模拟器是预先写好的剧本，成功率实验是简化的乘法模型，已在实验里标明。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="loop.js?v=1"></script>
+</body>
+</html>

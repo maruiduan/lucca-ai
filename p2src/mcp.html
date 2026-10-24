@@ -1,0 +1,147 @@
+{"n":12,"short":"MCP","js":"mcp.js"}
+<style>
+.mx{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.mx svg{width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.mx figcaption{font-size:12.5px;color:var(--sub);text-align:center;margin-top:2px}
+.mx line{stroke:var(--accent);stroke-width:1;opacity:.55}.mx .hub{fill:var(--blue)}
+.mx .a{fill:var(--gold)}.mx .t{fill:var(--green)}
+.seq{display:grid;gap:8px;margin:10px 0}
+.sq{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--bg);font-size:14px;line-height:1.6;transition:opacity .3s}
+.sq.off{display:none}.sq.cur{border-color:var(--accent);background:var(--soft)}
+.sq .who{font-size:12px;color:var(--sub)}.sq .who b{color:var(--ink)}
+.sq pre{font:12.5px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;margin:6px 0 0;color:var(--blue)}
+.qz{display:grid;gap:8px;margin:10px 0}
+.qi{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--bg);font-size:14.5px;line-height:1.6}
+.qi .seg{margin-top:6px}.qi .fb{font-size:13px;color:var(--sub);margin-top:4px;min-height:0}
+.qi.ok{border-color:var(--green)}.qi.no{border-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+.chk{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+</style>
+<h1>MCP：给智能体一个通用插座</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 4 篇　|　约 15 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small><a href="../tools/">工具调用</a>让模型能「动手」，但每个应用、每个工具都得单独对接一遍。<strong>MCP（Model Context Protocol，模型上下文协议）</strong>是一套公开的规矩：工具方按它做一次「服务器」，任何支持它的 AI 应用都能直接接上。官方的比喻是 AI 应用的 <strong>USB‑C 接口</strong>。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">8 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">问题：M 个应用 × N 个工具</a></li>
+<li><a href="#s2">三个角色：主机、客户端、服务器</a></li>
+<li><a href="#s3">一次调用到底发了什么</a></li>
+<li><a href="#s4">服务器能提供的三样东西</a></li>
+<li><a href="#s5">本地还是远程：两种传输方式</a></li>
+<li><a href="#s6">风险：插上的不一定可信</a></li>
+<li><a href="#s7">从一家公司的协议到行业标准</a></li>
+<li><a href="#s8">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>问题：M 个应用 × N 个工具</h2>
+<p>回忆<a href="../tools/">第 1 篇</a>：要让模型查天气，你得写一份工具说明书（名字、用途、参数格式），再写代码真正去调天气接口，把结果塞回上下文。这些代码是<b>写在某一个 AI 应用里的</b>。</p>
+<p>现在想象有 M 个 AI 应用（聊天助手、编程工具、办公软件里的 AI……），N 个想被 AI 用的服务（GitHub、数据库、日历、内部系统……）。没有统一规矩时，每一对都要单独写一遍对接代码，一共 <b>M×N</b> 份。每次某个服务改了接口，M 个应用都得跟着改。</p>
+<p>有了统一协议，每个服务只按协议写<b>一次</b>，每个应用也只实现<b>一次</b>协议，总共 <b>M+N</b> 份。这跟 USB 的道理一样：以前每种设备一种接口，现在一个口插所有东西。</p>
+<div class="demo" id="mx-demo">
+ <div class="demo-h"><b>小实验 ①：要写多少份对接代码</b><span class="badge">算术</span></div>
+ <div class="temp-wrap" style="border:0;padding-top:0;margin-top:0">
+  <div class="temp-row"><span>AI 应用 M = <span class="temp-val" id="mx-mv">4</span></span></div>
+  <input type="range" id="mx-m" min="1" max="12" value="4" aria-label="应用数">
+  <div class="temp-row"><span>工具/服务 N = <span class="temp-val" id="mx-nv">6</span></span></div>
+  <input type="range" id="mx-n" min="1" max="12" value="6" aria-label="工具数">
+ </div>
+ <div class="mx"><figure style="margin:0"><svg id="mx-a" viewBox="0 0 200 160"></svg><figcaption>各自对接</figcaption></figure><figure style="margin:0"><svg id="mx-b" viewBox="0 0 200 160"></svg><figcaption>都走 MCP</figcaption></figure></div>
+ <div class="kpis"><div class="kpi">各自对接<b id="mx-x">—</b></div><div class="kpi">都走 MCP<b class="ac" id="mx-p">—</b></div><div class="kpi">省掉<b id="mx-s">—</b></div></div>
+ <p class="pipe-cap" id="mx-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 这是理想化的算术：现实中「实现一次协议」的工作量也不小，有的工具仍需要针对某个应用做适配。但量级上的差别是真的。</p>
+</div>
+
+<h2 id="s2"><span class="k">02</span>三个角色：主机、客户端、服务器</h2>
+<p>MCP 规范里有三个角色，名字容易混，记住这张对应表就行：</p>
+<div class="hscroll"><table class="t">
+<tr><th>角色</th><th>是什么</th><th>例子</th></tr>
+<tr><td><b>主机</b> host</td><td>你直接用的 AI 应用，里面有模型</td><td>桌面版聊天助手、编程工具</td></tr>
+<tr><td><b>客户端</b> client</td><td>主机里负责「接一个服务器」的连接器。接几个服务器就有几个客户端</td><td>主机内部的一段代码</td></tr>
+<tr><td><b>服务器</b> server</td><td>把某个服务包装成 MCP 的小程序，对外提供工具等能力</td><td>GitHub 服务器、文件系统服务器</td></tr>
+</table></div>
+<p>注意「服务器」不一定在远方的机房。很多 MCP 服务器就是你电脑上的一个小程序，由主机启动，只和这一台主机说话。</p>
+<p>它们之间说的「语言」是 <b>JSON‑RPC 2.0</b>：一种很老、很简单的格式，每条请求写明要调用的方法名（比如 <code>tools/list</code>）和参数，对方回一条带同样编号的结果。</p>
+
+<h2 id="s3"><span class="k">03</span>一次调用到底发了什么</h2>
+<p>用户说「帮我看看 lucca 仓库里还开着的 issue」。下面一步步看主机、模型和 GitHub 服务器之间传了什么。点「下一步」：</p>
+<div class="demo" id="seq-demo">
+ <div class="demo-h"><b>小实验 ②：拆开一次 MCP 调用</b><span class="badge">简化报文</span></div>
+ <div class="seq" id="seq"></div>
+ <div class="row"><button id="seq-next">下一步 ▶</button><button id="seq-reset">从头来</button><span id="seq-n" style="font-size:13px;color:var(--sub)"></span></div>
+ <p class="pipe-cap" id="seq-cap" style="min-height:3.4em"></p>
+ <p class="lbl">⚠️ 报文做了简化：真实请求还带着协议版本、客户端能力等字段。仓库名和 issue 是虚构的。</p>
+</div>
+<p>两个要点。第一，<b>模型本身不说 MCP</b>。模型只看到工具说明书、只会说「我要调这个工具」，和第 1 篇完全一样；把这句话翻译成 MCP 报文、发给对的服务器，是主机的事。所以 MCP 换的是「工具从哪儿来」，没换「模型怎么用工具」。</p>
+<p>第二，工具清单是<b>运行时问来的</b>（<code>tools/list</code>），不是写死在应用里的。服务器加了新工具，主机下次一问就知道。最新版规范还要求服务器每次按<b>固定顺序</b>返回清单，原因你在<a href="../context-eng/">上一篇</a>见过：上下文开头不变，缓存才能命中。</p>
+
+<h2 id="s4"><span class="k">04</span>服务器能提供的三样东西</h2>
+<p>工具只是其中一样。MCP 服务器一共可以提供三类东西，区别在于<b>谁决定什么时候用</b>：</p>
+<div class="hscroll"><table class="t">
+<tr><th>类别</th><th>是什么</th><th>谁来决定用</th></tr>
+<tr><td><b>工具</b> tools</td><td>能执行的动作：查询、创建、发送……</td><td><b>模型</b>自己决定调</td></tr>
+<tr><td><b>资源</b> resources</td><td>可读的数据：文件内容、数据库表结构、文档</td><td>通常由<b>应用</b>决定放进上下文</td></tr>
+<tr><td><b>提示模板</b> prompts</td><td>写好的指令模板，比如「代码审查」</td><td>通常由<b>用户</b>点选（像斜杠命令）</td></tr>
+</table></div>
+<p>反方向，主机也可以给服务器提供能力。目前最重要的是 <b>elicitation（征询）</b>：服务器干到一半需要用户补充信息或确认，可以请主机去问用户。早期版本还有 roots（告诉服务器能碰哪些目录）和 sampling（服务器借主机的模型用一下），在 2026 年 7 月的新版里被标为「弃用」。</p>
+<div class="demo" id="qz-demo">
+ <div class="demo-h"><b>小实验 ③：分一分，这是工具、资源还是提示模板</b><span class="badge">小测验</span></div>
+ <div class="qz" id="qz"></div>
+ <div class="kpis"><div class="kpi">答对<b class="ac" id="qz-s">0 / 6</b></div></div>
+</div>
+
+<h2 id="s5"><span class="k">05</span>本地还是远程：两种传输方式</h2>
+<p>报文内容一样，「怎么送过去」有两种标准做法：</p>
+<ul>
+<li><b>stdio（标准输入输出）</b>：主机在你电脑上把服务器当子程序启动，通过它的输入输出管道收发消息。简单、不走网络，适合读本地文件、操作本机软件。</li>
+<li><b>Streamable HTTP</b>：服务器在网上，每条消息是一次发到同一个地址的 HTTP POST；回复可以是一次性的 JSON，也可以是一段「流」（SSE），边做边汇报进度。适合 SaaS 服务、团队共用，需要登录授权（规范采用 OAuth）。</li>
+</ul>
+<p>2026‑07‑28 版规范做了一次大改：<b>去掉了「握手」和会话</b>。以前连接时要先互相 <code>initialize</code> 一下，之后服务器要记住「这是哪个会话」；现在每个请求自己带上协议版本和能力说明，服务器可以完全无状态。对远程服务器来说，这意味着可以像普通网站一样随便扩容、放在负载均衡后面。需要跨请求记住的东西，改为由服务器发一个「句柄」，当普通参数传回来。</p>
+
+<h2 id="s6"><span class="k">06</span>风险：插上的不一定可信</h2>
+<p>MCP 让「装一个新工具」变得像装浏览器插件一样容易，风险也一样。最典型的是 2025 年 4 月 Invariant Labs 公布的<b>工具投毒</b>（tool poisoning）：恶意服务器在工具说明书里藏指令。用户界面上只显示工具名和一句简介，但<b>模型会读到完整说明</b>。</p>
+<div class="demo" id="tp-demo">
+ <div class="demo-h"><b>小实验 ④：同一个工具，你看到的和模型看到的</b><span class="badge">示例</span></div>
+ <div class="seg" id="tp-v"><button class="on">你在界面上看到的</button><button>模型读到的说明书</button></div>
+ <div class="rawbox" id="tp-box"></div>
+ <div class="chk" id="tp-sw"></div>
+ <div class="verdict" id="tp-r"></div>
+ <p class="lbl">⚠️ 工具和指令是仿照 Invariant Labs 演示编写的虚构示例，不会真的执行。</p>
+</div>
+<p>这其实是<b>提示注入</b>的一种，第 11 篇「评测与安全」会系统讲。对使用者来说，实用的规矩是：只装来源可信的服务器；让会写入、会发送、会花钱的工具<b>每次调用都要你确认</b>；留意服务器更新后说明书有没有偷偷变。规范本身也建议：调用工具时始终要有人能拒绝。</p>
+
+<h2 id="s7"><span class="k">07</span>从一家公司的协议到行业标准</h2>
+<ul>
+<li><b>2024 年 11 月 25 日</b>：Anthropic 发布并开源 MCP，包括规范、开发包、Claude 桌面版对本地服务器的支持，和一批现成服务器（Google Drive、Slack、GitHub、Postgres 等）。</li>
+<li><b>2025 年春</b>：大厂相继跟进。3 月 19 日微软在 Copilot Studio 推出 MCP 支持（预览）；3 月 26 日 OpenAI 宣布支持，当天 Agents SDK 可用，ChatGPT 桌面版和 Responses API 随后跟上；4 月 9 日 Google DeepMind 宣布 Gemini 模型和 SDK 将支持，5 月 Google I/O 上在 Gemini API 和 SDK 里内置。</li>
+<li><b>2025 年 12 月 9 日</b>：Anthropic 把 MCP 捐给 Linux 基金会下新成立的 <b>Agentic AI Foundation（智能体 AI 基金会，AAIF）</b>，由 Anthropic、Block、OpenAI 共同发起，Google、微软、亚马逊等支持。当时公布的数字：<b>超过 1 万个</b>活跃的公开 MCP 服务器，各语言开发包<b>每月下载 9700 万次以上</b>。</li>
+<li><b>2026 年 7 月 28 日</b>：发布去掉握手、改为无状态的新版规范（上一节）。</li>
+</ul>
+<p>它没有取代第 1 篇讲的工具调用，而是在它下面加了一层「工具从哪儿来」的标准。下一篇的 Skill 则解决另一个问题：工具有了，<b>怎么教会智能体按你的方式用好它们</b>。</p>
+
+<h2 id="s8"><span class="k">08</span>记住这些就够了</h2>
+<ol class="keep">
+<li>MCP 是一套公开协议：服务写一次 MCP 服务器，所有支持它的 AI 应用都能用，把 <b>M×N</b> 的对接变成 <b>M+N</b>。</li>
+<li>主机（AI 应用）里的客户端连接服务器，用 JSON‑RPC 先问清单（<code>tools/list</code>）再调用（<code>tools/call</code>）。<b>模型本身不说 MCP</b>，它看到的还是工具说明书。</li>
+<li>服务器提供三样：<b>工具</b>（模型决定用）、<b>资源</b>（应用决定放）、<b>提示模板</b>（用户点选）。</li>
+<li>本地用 stdio，远程用 Streamable HTTP；2026‑07 新版去掉握手，变成无状态。</li>
+<li>插上的服务器能往模型眼前塞字，<b>只装可信的，敏感操作要确认</b>。</li>
+</ol>
+<div class="pn">
+ <a href="../context-eng/"><small>← 上一篇</small>上下文工程</a>
+ <a class="nx" href="../skill/"><small>下一篇 →</small>Skill</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Anthropic，<a href="https://www.anthropic.com/news/model-context-protocol" rel="noopener">Introducing the Model Context Protocol</a>（2024 年 11 月 25 日）。</li>
+<li>MCP 官方规范 <a href="https://modelcontextprotocol.io/specification/2026-07-28" rel="noopener">2026‑07‑28 版</a> 及其<a href="https://modelcontextprotocol.io/specification/2026-07-28/changelog" rel="noopener">变更记录</a>：主机/客户端/服务器、JSON‑RPC 2.0、工具/资源/提示模板、去掉 initialize 握手、弃用 roots 与 sampling、tools/list 固定顺序。</li>
+<li>MCP 规范，<a href="https://modelcontextprotocol.io/specification/2026-07-28/basic/transports" rel="noopener">Transports</a>：stdio 与 Streamable HTTP。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation" rel="noopener">Donating the Model Context Protocol and establishing the Agentic AI Foundation</a>（2025 年 12 月 9 日）。1 万多个服务器、每月 9700 万次以上下载。</li>
+<li>Invariant Labs，<a href="https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks" rel="noopener">MCP Security Notification: Tool Poisoning Attacks</a>（2025 年 4 月 1 日）。</li>
+<li>OpenAI Agents SDK，<a href="https://openai.github.io/openai-agents-python/mcp/" rel="noopener">Model context protocol (MCP)</a>。</li>
+<li>Microsoft Copilot Blog，<a href="https://www.microsoft.com/en-us/copilot/blog/copilot-studio/introducing-model-context-protocol-mcp-in-copilot-studio-simplified-integration-with-ai-apps-and-agents/" rel="noopener">Introducing Model Context Protocol (MCP) in Copilot Studio</a>（2025 年 3 月 19 日）。</li>
+<li>Sam Altman，<a href="https://x.com/sama/status/1904957253456941061" rel="noopener">X 上的公告</a>（2025 年 3 月 26 日）：「available today in the agents SDK and support for chatgpt desktop app + responses api coming soon」。</li>
+<li>Demis Hassabis，<a href="https://x.com/demishassabis/status/1910107859041271977" rel="noopener">X 上的公告</a>（2025 年 4 月 9 日）：Gemini 模型和 SDK 将支持 MCP；另见 <a href="https://techcrunch.com/2025/04/09/google-says-itll-embrace-anthropics-standard-for-connecting-ai-models-to-data/" rel="noopener">TechCrunch 报道</a>。</li>
+</ol>
+<p class="note">本页实验 ②④ 里的报文、仓库和工具说明是虚构示例；实验 ① 是理想化算术。</p>

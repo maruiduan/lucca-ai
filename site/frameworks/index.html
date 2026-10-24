@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>LangChain 等框架 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="LangChain 等智能体框架替你做了什么、要付出什么代价，什么时候值得用，什么时候直接写更好。"><link rel="canonical" href="https://ai.lucca.top/frameworks/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="LangChain 等框架 · AI 是怎么回事 · lucca"><meta property="og:description" content="LangChain 等智能体框架替你做了什么、要付出什么代价，什么时候值得用，什么时候直接写更好。"><meta property="og:url" content="https://ai.lucca.top/frameworks/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+<style>
+.code{font:12.5px/1.7 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}
+.code .c{color:var(--sub)}.code .k{color:var(--blue)}.code .hid{display:none;background:var(--gold-soft)}
+.code.open .hid{display:block}
+.pat{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin:12px 0;min-height:90px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.pat .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:13px;background:var(--card);text-align:center;line-height:1.4}
+.pat .n.l{border-color:var(--blue);color:var(--blue)}.pat .n.g{border-color:var(--gold)}
+.pat .a{color:var(--sub);font-size:13px}.pat .col{display:flex;flex-direction:column;gap:5px}
+.nodes{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;align-items:center}
+.nodes .n{border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13.5px;background:var(--bg);transition:all .3s}
+.nodes .n.done{border-color:var(--green);background:var(--blue-soft)}.nodes .n.redo{border-color:var(--gold);background:var(--gold-soft)}
+.nodes .n.x{border-color:var(--accent);background:var(--soft)}.nodes .n.cp:after{content:" 💾";font-size:11px}
+.nodes .a{color:var(--sub)}
+.qa{display:grid;gap:8px;margin:10px 0}.qa .q{font-size:14.5px}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 18 篇</span></nav>
+<article id="art">
+<h1>LangChain 等框架：搭智能体的现成积木</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 10 篇　|　约 13 分钟　|　4 个小实验</p>
+<div class="lead"><small>一句话结论</small>前面九篇讲的东西（工具调用、循环、上下文管理、记忆、多智能体）你都可以自己写。<strong>框架</strong>就是把这些常用部件做成现成积木：LangChain、LangGraph、AutoGen、OpenAI Agents SDK……它们让你起步更快，代价是<strong>多了一层你看不见的东西</strong>。Anthropic 的建议是：先直接调模型接口，真需要时再上框架，而且要懂它底下在做什么。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">框架到底帮你做了什么</a></li>
+<li><a href="#s2">几个主要的框架</a></li>
+<li><a href="#s3">工作流还是智能体：五种常见搭法</a></li>
+<li><a href="#s4">图：把流程画出来，还能断点续跑</a></li>
+<li><a href="#s5">框架的代价</a></li>
+<li><a href="#s6">要不要用框架</a></li>
+<li><a href="#s7">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>框架到底帮你做了什么</h2>
+<p>一个最简单的智能体，用<a href="../loop/">循环那篇</a>的话说，就是「调模型 → 看它要不要用工具 → 执行工具 → 把结果放回去 → 再调模型」。自己写大约二三十行。用框架，可能五六行就够了。少掉的那些行去哪了？</p>
+<div class="demo" id="cd-demo">
+ <div class="demo-h"><b>小实验 ①：同一个查天气的智能体</b><span class="badge">示意代码</span></div>
+ <div class="seg" id="cd-m"><button class="on">自己写</button><button>用框架</button></div>
+ <div class="row" style="margin-top:8px"><button class="tgl" id="cd-open">显示框架替你做的事</button></div>
+ <div class="code" id="cd-box"></div>
+ <p class="pipe-cap" id="cd-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 伪代码，不对应任何一个框架的真实接口；只为说明「框架把哪些部分藏起来了」。</p>
+</div>
+<p>大体上，框架提供这几类东西：</p>
+<ul>
+<li><b>统一的模型接口</b>：换一家模型只改一行。</li>
+<li><b>工具定义</b>：从函数签名自动生成工具说明书，自动解析模型的调用请求。</li>
+<li><b>循环和控制流</b>：内置智能体循环，或者让你把流程画成图。</li>
+<li><b>状态与记忆</b>：保存对话、检查点、长期记忆。</li>
+<li><b>现成的连接器</b>：检索、向量数据库、各种第三方服务，现在也常常直接支持 <a href="../mcp/">MCP</a>。</li>
+<li><b>追踪与评测</b>：把每一步的提示、工具调用、耗时记下来，方便排查。</li>
+</ul>
+
+<h2 id="s2"><span class="k">02</span>几个主要的框架</h2>
+<div class="hscroll"><table class="t">
+<tr><th>名字</th><th>出处与时间</th><th>特点</th></tr>
+<tr><td><b>LangChain</b></td><td>Harrison Chase，2022 年 10 月开源</td><td>最早、生态最大的一个：模型、提示、检索、工具的统一接口和大量连接器。GitHub 上约 14.8 万星（2026 年 10 月）</td></tr>
+<tr><td><b>LangGraph</b></td><td>LangChain 团队，2024 年 1 月</td><td>把智能体画成<b>图</b>：节点是步骤，边是跳转，允许循环；带状态和检查点</td></tr>
+<tr><td><b>AutoGen</b></td><td>微软研究院，2023 年 8 月论文</td><td>多个智能体<b>互相对话</b>来完成任务</td></tr>
+<tr><td><b>OpenAI Agents SDK</b></td><td>OpenAI，2025 年 3 月 11 日</td><td>很少的几个概念：智能体、交接（handoff）、护栏（guardrail），内置追踪；前身是实验项目 Swarm</td></tr>
+<tr><td>其他</td><td>—</td><td>LlamaIndex（偏检索）、CrewAI（角色分工）、各大模型厂商自己的智能体 SDK 等</td></tr>
+</table></div>
+<p>趋势很明显：早期框架追求「什么都包」，后来的框架越来越<b>轻</b>，只提供最少的几个概念，把控制权还给开发者。</p>
+
+<h2 id="s3"><span class="k">03</span>工作流还是智能体：五种常见搭法</h2>
+<p>Anthropic 2024 年 12 月的文章《Building effective agents》做了一个很有用的区分：<b>工作流</b>（workflow）是由代码预先写好路线、模型在固定位置被调用；<b>智能体</b>（agent）是由模型自己决定下一步做什么。很多任务用工作流就够了，更便宜、更可控。文章总结了五种常见的工作流：</p>
+<div class="demo" id="pt-demo">
+ <div class="demo-h"><b>小实验 ②：五种工作流 + 智能体</b><span class="badge">示意图</span></div>
+ <div class="seg" id="pt-m"><button class="on">串联</button><button>分流</button><button>并行</button><button>编排</button><button>评审改进</button><button>智能体</button></div>
+ <div class="pat" id="pt-d"></div>
+ <p class="pipe-cap" id="pt-cap" style="min-height:4.6em"></p>
+</div>
+<p>文章的核心建议：<b>从最简单的方案开始</b>，一次模型调用加检索能解决就别搭工作流，工作流能解决就别上智能体。只有当步骤数无法预先确定、需要模型灵活判断时，才值得为智能体的成本和不确定性买单。</p>
+
+<h2 id="s4"><span class="k">04</span>图：把流程画出来，还能断点续跑</h2>
+<p>LangGraph 一类框架的思路是：把流程写成一张<b>图</b>，每个节点是一步（调模型、调工具、等人审批），边决定下一步去哪。图里可以有回路，这正是智能体循环。图的好处之一是可以在每个节点后<b>存检查点</b>：程序崩了、要等人审批一天，都能从断点接着跑，而不必从头再来。</p>
+<div class="demo" id="gp-demo">
+ <div class="demo-h"><b>小实验 ③：第 5 步出错了</b><span class="badge">示例</span></div>
+ <div class="row"><button class="tgl" id="gp-cp">每步存检查点：关</button><button id="gp-run">运行 ▶</button></div>
+ <div class="nodes" id="gp-n"></div>
+ <div class="kpis"><div class="kpi">重跑的步数<b id="gp-re">—</b></div><div class="kpi">多花的模型调用<b class="ac" id="gp-cost">—</b></div></div>
+ <p class="pipe-cap" id="gp-cap" style="min-height:3.2em"></p>
+ <p class="lbl">⚠️ 示例流程。「重复执行已经发出去的邮件」这类副作用是真实系统里检查点要解决的典型问题。</p>
+</div>
+
+<h2 id="s5"><span class="k">05</span>框架的代价</h2>
+<p>Anthropic 在同一篇文章里说得很直接：框架能简化调用模型、定义工具、串联调用这些底层工作，但它们常常<b>多出一层抽象，把底下真实的提示和回复挡住，更难排查</b>；也容易诱使人把本可以很简单的东西搞复杂。他们建议开发者<b>先直接用模型接口</b>，很多模式几行代码就能写出来；如果用框架，一定要弄明白底层代码。</p>
+<p>常见的具体痛点：</p>
+<ul>
+<li><b>看不见提示</b>：框架替你拼了一大段系统提示，出了问题你不知道模型到底看到了什么。</li>
+<li><b>版本变化快</b>：这个领域一年一变，框架的接口也跟着变，老代码要跟着改。</li>
+<li><b>抽象不合身</b>：你的需求稍微特别一点，就要绕过框架写，最后两套逻辑并存。</li>
+</ul>
+<p>好的一面是，新一代框架普遍内置了<b>追踪</b>，能把每一步实际发出的提示和返回都展示出来，部分缓解了「看不见」的问题。</p>
+
+<h2 id="s6"><span class="k">06</span>要不要用框架</h2>
+<div class="demo" id="dc-demo">
+ <div class="demo-h"><b>小实验 ④：回答四个问题</b><span class="badge">经验法则</span></div>
+ <div class="qa" id="dc-q"></div>
+ <div class="verdict" id="dc-r"></div>
+ <p class="lbl">⚠️ 这是基于上面几篇资料整理的经验法则，不是标准答案。</p>
+</div>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li>框架 = 把模型接口、工具定义、循环、状态、连接器、追踪做成现成积木。它不提供新能力，只提供方便。</li>
+<li>先分清<b>工作流</b>（代码定路线）和<b>智能体</b>（模型定路线）。能用简单的就别用复杂的。</li>
+<li>图式框架的长处是流程清楚、能存检查点、方便插入人工审批。</li>
+<li>框架的代价是<b>看不见底下的提示</b>、版本变化快。用之前先懂它底下在做什么。</li>
+</ol>
+<div class="pn">
+ <a href="../coding/"><small>← 上一篇</small>编程智能体</a>
+ <a class="nx" href="../eval-safety/"><small>下一篇 →</small>评测与安全</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Anthropic，<a href="https://www.anthropic.com/engineering/building-effective-agents" rel="noopener">Building effective agents</a>（2024 年 12 月 19 日）。工作流与智能体、五种工作流、关于框架的建议。</li>
+<li><a href="https://github.com/langchain-ai/langchain" rel="noopener">langchain-ai/langchain（GitHub 仓库）</a>：仓库建于 2022 年 10 月 17 日；2026 年 10 月 22 日 GitHub 显示 148,269 星。作者 Harrison Chase，另见 <a href="https://en.wikipedia.org/wiki/LangChain" rel="noopener">维基百科</a>。</li>
+<li>LangChain 博客，<a href="https://blog.langchain.com/langgraph/" rel="noopener">LangGraph</a>（2024 年 1 月 17 日）。在链里引入循环。</li>
+<li>Wu 等，<a href="https://arxiv.org/abs/2308.08155" rel="noopener">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a>（2023 年 8 月）。</li>
+<li>OpenAI，<a href="https://openai.com/index/new-tools-for-building-agents/" rel="noopener">New tools for building agents</a>（2025 年 3 月 11 日）；<a href="https://openai.github.io/openai-agents-python/" rel="noopener">Agents SDK 文档</a>：智能体、交接、护栏、追踪，Swarm 的升级版；<a href="https://github.com/openai/openai-agents-python" rel="noopener">GitHub 仓库</a>同日公开（2025 年 3 月 11 日建库）。</li>
+</ol>
+<p class="note">本页实验 ①③ 的代码和流程是示意；实验 ② 的五种模式来自 Anthropic 文章；实验 ④ 是经验法则。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="fw.js?v=1"></script>
+</body>
+</html>

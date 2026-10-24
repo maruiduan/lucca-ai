@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="用大白话和互动小实验讲清楚 AI：大模型怎么训练、为什么会幻觉、RAG 和推理模型是什么，以及智能体、MCP、Skill 怎么工作。"><link rel="canonical" href="https://ai.lucca.top/"><meta property="og:type" content="website"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="AI 是怎么回事 · lucca"><meta property="og:description" content="用大白话和互动小实验讲清楚 AI：大模型怎么训练、为什么会幻觉、RAG 和推理模型是什么，以及智能体、MCP、Skill 怎么工作。"><meta property="og:url" content="https://ai.lucca.top/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/ai.css?v=4">
+</head>
+<body>
+<div class="wrap">
+  <nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><span>AI</span></nav>
+  <header>
+    <div class="brand"><div class="seal">L</div><h1>AI 是怎么回事</h1></div>
+    <p class="tag">给不写代码的人看的 AI 原理。每篇一个问题，配一个能动手玩的小实验，读完就懂一点。</p>
+  </header>
+
+  <div class="part-head"><h2>第一部分 · 大模型本身</h2><span>LLM 是怎么「想」出下一句话的</span></div>
+  <div class="list" id="p1"></div>
+
+  <div class="part-head"><h2>第二部分 · 智能体</h2><span>从会说话，到会干活</span></div>
+  <div class="list" id="p2"></div>
+
+  <footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script>
+const P1=[
+ {t:"什么是 LLM",d:"它其实只做一件事：猜下一个字。从发展历史讲到 token、向量、注意力和温度，配四个小实验。",u:"llm/",live:1},
+ {t:"预训练",d:"在海量文字上学「接话」：数据从哪来、损失和梯度下降是什么。你还能在浏览器里亲手训练一个小模型。",u:"pretrain/",live:1},
+ {t:"后训练",d:"指令微调和人类反馈（RLHF）：让只会接话的模型学会好好回答。你来当标注员，训练一个奖励模型。",u:"posttrain/",live:1},
+ {t:"上下文与提示词",d:"模型每次只看眼前这串文字：聊天记录、系统提示、上下文窗口，以及怎样把话说清楚。",u:"context/",live:1},
+ {t:"幻觉与局限",d:"它为什么会一本正经地胡说，为什么数不清 strawberry 里的 r，以及该怎么核对。",u:"hallucination/",live:1},
+ {t:"RAG：先查资料再回答",d:"给模型接一个资料库，看它从凭印象乱说变成照着资料答、注明出处。",u:"rag/",live:1},
+ {t:"推理模型",d:"先写草稿再回答：思维链、多想几遍投票，以及用强化学习练出「会想」的模型。",u:"reasoning/",live:1},
+ {t:"蒸馏与量化",d:"让大模型变小、变快：老师教学生、把参数存得更省，算算你的电脑能跑多大的模型。",u:"small/",live:1}
+];
+const P2=[
+ {t:"工具调用",d:"模型只会输出文字，怎么「动手」？看它开出一张调用申请单，程序替它执行。配一个能一步步点的模拟器。",u:"tools/",live:1},
+ {t:"智能体循环",d:"想一步、做一步、看结果、再想：看一个智能体带着草稿本一步步完成任务，以及它什么时候该停。",u:"loop/",live:1},
+ {t:"上下文工程",d:"智能体干活时上下文越塞越满：又贵又容易糊涂。看它怎么写笔记、按需取用、压缩摘要、给工具结果瘦身。",u:"context-eng/",live:1},
+ {t:"MCP",d:"给 AI 接工具的统一插口，服务端和客户端各管什么。",u:"mcp/",live:1},
+ {t:"Skill",d:"把经验写成说明书，用到时才翻开，省下宝贵的上下文。",u:"skill/",live:1},
+ {t:"扩展与插件",d:"把工具、说明书和配置打包，装进软件里。",u:"plugins/",live:1},
+ {t:"记忆与子任务",d:"长期记忆怎么存、怎么取；把大任务分给多个智能体一起做。",u:"memory/",live:1},
+ {t:"会用电脑的智能体",d:"看屏幕、点鼠标、敲键盘：让 AI 直接操作浏览器和电脑。",u:"computer-use/",live:1},
+ {t:"编程智能体",d:"读代码、改代码、跑测试：AI 写程序到底是怎么做到的，又差在哪里。",u:"coding/",live:1},
+ {t:"LangChain 等框架",d:"搭智能体的现成积木，它们帮你做了什么、没做什么。",u:"frameworks/",live:1},
+ {t:"评测与安全",d:"怎么判断智能体靠不靠谱，以及怎样防止它被一段文字带偏。",u:"eval-safety/",live:1}
+];
+function render(id,arr,start){
+  const box=document.getElementById(id);
+  arr.forEach((a,i)=>{
+    const el=document.createElement(a.live?'a':'div');
+    el.className='item'+(a.live?'':' off');
+    if(a.live)el.href=a.u;else el.setAttribute('aria-disabled','true');
+    el.innerHTML=`<span class="num">${start+i}</span><div class="body"><div class="t"><span class="tt"></span>${a.live?'':'<span class="badge">即将上线</span>'}</div><p class="d"></p></div>`;
+    el.querySelector('.tt').textContent=a.t;el.querySelector('.d').textContent=a.d;
+    box.appendChild(el);
+  });
+}
+render('p1',P1,1);render('p2',P2,P1.length+1);
+document.getElementById('y').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>

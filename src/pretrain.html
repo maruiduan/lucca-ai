@@ -1,0 +1,128 @@
+<!--title: 预训练：从海量文字里学「接话」-->
+<!--short: 预训练-->
+<!--meta: 第一部分 · 大模型本身 · 第 2 篇　|　约 15 分钟　|　4 个小实验-->
+<!--lead: 预训练就是让模型对着海量文字一遍遍<strong>猜下一个 token</strong>，每猜一次就按「错得有多离谱」把上千亿个旋钮往「猜得更准」的方向拧一点点。拧完得到的叫<strong>基础模型</strong>：知识很多、很会接话，但还不会好好回答问题。-->
+
+<h2 id="s1"><span class="k">01</span>先打个比方：读遍图书馆的学徒</h2>
+<p>想象一个学徒，被关进一座巨大的图书馆，任务只有一个：随手翻开一本书，遮住下一个字，猜它是什么，然后揭开看答案。猜对了，记住自己是怎么猜的；猜错了，调整一下想法。就这样做上万亿次。</p>
+<p>没人教他语法，也没人告诉他「巴黎是法国首都」。可为了把下一个字猜准，他不得不慢慢摸清：句子怎么搭、故事怎么展开、代码怎么写，以及书里反复提到的各种事实。<strong>「猜下一个字」这个简单的考题，逼着模型学会了大量关于语言和世界的知识。</strong></p>
+<p>Andrej Karpathy 把这个过程比作「把互联网压缩」：几十 TB 的文字被压进一个几百 GB 的参数文件里。压缩是有损的，模型记住的是规律和大意，而不是原文的每一个字，所以它说的话<b>像</b>它读过的东西，却不保证一字不差，这也埋下了后面要讲的「幻觉」。</p>
+<p>上一篇讲了模型怎么<b>用</b>参数来猜下一个字，这一篇讲这些参数是怎么<b>学</b>出来的，分三步：准备教材、出题打分、拧旋钮。</p>
+
+<h2 id="s2"><span class="k">02</span>第一步：准备教材</h2>
+<p>教材主要来自公开网页，此外还有书籍、百科、论文和大量代码。最常见的网页来源是 <b>Common Crawl</b>，一个从 2008 年起定期抓取全网的公益项目。</p>
+<p>原始网页很「脏」：导航栏、广告、乱码、重复转载、只有关键词的垃圾页，还有邮箱、电话等个人信息。所以要先过一条清洗流水线。Hugging Face 公开过一套完整做法（FineWeb）：从网页里抽出正文 → 只留目标语言 → 用规则和小模型筛掉低质量文本 → 去掉重复内容 → 隐去邮箱和 IP 地址。他们用 96 次 Common Crawl 抓取的数据，最后得到约 <b>15 万亿个 token</b> 的干净英文文本。</p>
+<div class="demo" id="flt-demo">
+ <div class="demo-h"><b>小实验 ①：亲手清洗一批网页</b><span class="badge">示例数据</span></div>
+ <p class="lbl">下面是 10 段「抓下来」的网页文字（我们编的例子）。打开过滤器，看哪些会被扔掉。</p>
+ <div class="row seg" id="flt-btns"></div>
+ <div class="kpis" id="flt-kpi"></div>
+ <div class="docs" id="flt-docs"></div>
+ <p class="lbl">真实流水线处理的是几十亿个网页，过滤器多达几十种，而且大多由程序和小模型自动判断。FineWeb 团队发现，每一步清洗都会让训练出来的模型在测试里表现更好：<b>教材的质量和数量一样重要。</b></p>
+</div>
+<p>教材有多大？几个有公开数字的例子：</p>
+<div class="hscroll"><table class="t">
+<tr><th>模型 / 数据</th><th>年份</th><th>预训练用的文字</th></tr>
+<tr><td>GPT（第一代）</td><td>2018</td><td>BooksCorpus，约 7000 本未出版的书</td></tr>
+<tr><td>GPT-2</td><td>2019</td><td>WebText，约 40 GB 网页文字</td></tr>
+<tr><td>GPT-3</td><td>2020</td><td>训练时读了约 3000 亿个 token</td></tr>
+<tr><td>Llama 2</td><td>2023</td><td>约 2 万亿个 token</td></tr>
+<tr><td>Llama 3</td><td>2024</td><td>超过 15 万亿个 token</td></tr>
+</table></div>
+<p class="lbl">单看 GPT-3 到 Llama 3 这四年，训练用的 token 数就涨了约五十倍。</p>
+
+<h2 id="s3"><span class="k">03</span>第二步：出题和打分</h2>
+<p>预训练最妙的地方是<b>不需要人出题</b>：任何一段文字本身就是一大堆考题。「床前明月光」可以拆成：看到「床」猜「前」，看到「床前」猜「明」，看到「床前明」猜「月」……每个位置都是一道题，答案就是原文里的下一个字。这叫<strong>自监督学习</strong>。</p>
+<p>怎么打分？看模型给<b>正确答案</b>分了多少概率。分到的概率越高越好；分得越低，罚得越重。具体的罚分是「负对数」：</p>
+<ul>
+<li>正确答案拿到 90% 的概率：罚 0.11 分（几乎不罚）；</li>
+<li>拿到 50%：罚 0.69 分；</li>
+<li>只拿到 1%：罚 4.6 分（重罚）。</li>
+</ul>
+<p>所有考题的平均罚分，就叫<strong>损失</strong>（loss，也叫交叉熵）。训练的全部目标，就是让这个数字越来越小。</p>
+<div class="demo" id="loss-demo">
+ <div class="demo-h"><b>小实验 ②：当一回阅卷老师</b><span class="badge">真实公式</span></div>
+ <p class="lbl">题目：「床前明月 ___」，正确答案是「光」。在图上左右拖动（或用滑块），设定模型给「光」的概率，看罚分怎么变。</p>
+ <canvas class="plot" id="loss-cv" width="640" height="300" aria-label="罚分曲线"></canvas>
+ <input type="range" id="loss-p" min="1" max="99" value="50" aria-label="给正确答案的概率">
+ <div class="kpis"><div class="kpi">给「光」的概率<b id="loss-pv">50%</b></div><div class="kpi">罚分 = −ln(概率)<b class="ac" id="loss-v">0.69</b></div></div>
+ <p class="lbl" id="loss-cap"></p>
+</div>
+<p>为什么要用对数，而不是简单地「猜对得 1 分」？因为模型输出的是一整张概率表，用概率来打分能告诉它<b>差多少</b>：给正确答案 40% 比给 5% 好得多，哪怕两次都没排第一。这个细腻的信号，正是下一步拧旋钮要用的。</p>
+
+<h2 id="s4"><span class="k">04</span>第三步：拧旋钮（梯度下降）</h2>
+<p>知道罚了多少分之后，要把每个旋钮往「罚得更少」的方向拧一点。可上千亿个旋钮，怎么知道每个该往哪边拧？</p>
+<p>想象你蒙着眼站在山坡上，想走到谷底。看不见全貌，但脚底能感觉到坡往哪边斜。那就朝下坡方向迈一小步，再感觉，再迈。这就是<strong>梯度下降</strong>：「梯度」就是每个旋钮所在位置的坡度，它告诉我们这个旋钮拧哪边、拧多少能让损失变小。一种叫<b>反向传播</b>的算法，能一次性把所有旋钮的坡度都算出来。</p>
+<p>每一步迈多大，叫<strong>学习率</strong>。步子太小，走得太慢；步子太大，会在谷底两边跳来跳去，甚至越跳越高。</p>
+<div class="demo" id="gd-demo">
+ <div class="demo-h"><b>小实验 ③：蒙眼下山</b><span class="badge">一维玩具</span></div>
+ <p class="lbl">曲线是「损失」，横轴是一个旋钮的位置。<b>点一下或拖动小球</b>选起点，再按「走一步」或「连续走」。</p>
+ <canvas class="plot" id="gd-cv" width="640" height="320" aria-label="梯度下降示意"></canvas>
+ <div class="temp-wrap" style="border:0;margin-top:6px;padding-top:0">
+  <div class="temp-row"><span>学习率（步子大小）<span class="temp-val" id="gd-lrv">0.30</span></span><span id="gd-lrd"></span></div>
+  <input type="range" id="gd-lr" min="0.02" max="1.6" step="0.02" value="0.3" aria-label="学习率">
+ </div>
+ <div class="row"><button class="pri" id="gd-run">▶ 连续走</button><button id="gd-step">走一步</button><button id="gd-reset">回到起点</button></div>
+ <div class="kpis"><div class="kpi">已走步数<b id="gd-n">0</b></div><div class="kpi">当前损失<b class="ac" id="gd-l">–</b></div></div>
+ <p class="lbl" id="gd-cap">试试：学习率 0.3 从右边出发；再试 1.4，看小球怎么来回乱跳；再从左边高处出发，看它会不会卡在一个「小坑」里。</p>
+</div>
+<p>真实的模型不是在一条线上走，而是在上千亿维的空间里走，但道理一样。每一步并不看全部教材，而是随机抽一小批（比如几百万个 token）算出坡度就迈一步，然后换下一批。Meta 的 Llama 2 就是每批 400 万个 token，这样走了几十万步。</p>
+
+<h2 id="s5"><span class="k">05</span>动手：在手机上训练一个迷你模型</h2>
+<p>下面是一个真的会「训练」的小模型。它只看<b>前一个字</b>来猜下一个字，所有旋钮就是一张表：「看到字 A 时，各个字 B 的分数」。一开始所有分数都是 0，也就是什么都不懂，每个字的机会均等。按下训练，它会用上面讲的三步，一点点把损失降下来。</p>
+<div class="demo" id="mini-demo">
+ <div class="demo-h"><b>小实验 ④：训练你自己的语言模型</b><span class="badge">玩具模型 · 真的在训练</span></div>
+ <div class="row seg" id="mini-corpus"></div>
+ <textarea id="mini-text" rows="3" hidden placeholder="在这里粘贴或输入一些句子，每行一句"></textarea>
+ <canvas class="plot pan" id="mini-cv" width="640" height="220" aria-label="损失曲线"></canvas>
+ <div class="legend"><span><i style="background:var(--accent)"></i>损失（越低越好）</span><span><i style="background:var(--blue)"></i>这个模型最好能到的损失</span></div>
+ <div class="kpis"><div class="kpi">训练步数<b id="mini-n">0</b></div><div class="kpi">当前损失<b class="ac" id="mini-l">–</b></div><div class="kpi">旋钮（参数）个数<b id="mini-p">–</b></div></div>
+ <div class="row"><button class="pri" id="mini-run">▶ 开始训练</button><button id="mini-reset">清零重来</button></div>
+ <div class="lbl">它现在会写（每次刷新都重新按概率抽）：</div>
+ <div class="sample" id="mini-sample"></div>
+ <p class="lbl">⚠️ 这是只看 1 个字的「二元模型」，参数一共只有「字数 × 字数」个，在你的手机上用梯度下降实时训练。它学到的是「哪个字后面常跟哪个字」，所以会写出半通不通的句子。真正的大模型用 Transformer、看几千上万个 token、有上千亿参数，但训练的三步和这里完全一样。</p>
+</div>
+<p>留意两个现象：一是损失一开始降得飞快，后来越来越慢，最终贴近蓝线；二是蓝线并不是 0。只看前一个字，本来就不可能每次都猜对，<b>模型的结构限制了它最多能学多好</b>。想再往下降，就要让它看得更远、旋钮更多，这正是 Transformer 和「规模」的意义。</p>
+
+<h2 id="s6"><span class="k">06</span>规模定律：越大越好，但要配平</h2>
+<p>2020 年，OpenAI 的研究者发现了一条很有规律的现象：模型越大、数据越多、算力越多，损失就按一条平滑的曲线稳定下降，几乎可以提前算出来。这叫<strong>规模定律</strong>（scaling laws）。它给了大家「继续做大」的信心，也让 GPT-3 这样的大投入变得可以预期。</p>
+<p>2022 年，DeepMind 的 Chinchilla 研究又补上了关键一环：<b>参数和数据要一起涨</b>。在算力固定时，最划算的配比大约是<b>每个参数配 20 个 token</b>。他们用这个配比训练的 Chinchilla（700 亿参数、1.4 万亿 token），比参数大四倍、但数据相对不足的 Gopher（2800 亿参数）表现更好。</p>
+<div class="demo" id="sc-demo">
+ <div class="demo-h"><b>小算盘：一个模型「该」读多少字？</b><span class="badge">按 Chinchilla 配比</span></div>
+ <label class="lbl">模型参数<select id="sc-n"><option value="1e9">10 亿（1B）</option><option value="8e9" selected>80 亿（8B）</option><option value="7e10">700 亿（70B）</option><option value="4.05e11">4050 亿（405B）</option></select></label>
+ <div class="kpis"><div class="kpi">「算力最划算」的数据量<b class="ac" id="sc-opt">–</b></div><div class="kpi">Llama 3 实际用了<b id="sc-real">–</b></div></div>
+ <p class="lbl" id="sc-cap"></p>
+</div>
+<p>后来人们发现，Chinchilla 配比只考虑了「训练省钱」，没考虑「使用省钱」。小模型用起来便宜，所以很多团队故意让小模型读远超配比的数据。Meta 在 Llama 3 的论文里就写道：旗舰模型大致按最优配比训练，而小模型「训练得比最优配比长得多」，换来同样使用成本下更好的效果。</p>
+
+<h2 id="s7"><span class="k">07</span>预训练练出了什么：基础模型</h2>
+<p>预训练结束，得到的是<strong>基础模型</strong>（base model）。它是一台「文档续写机」：给它任何开头，它都会续写成网上最可能出现的样子。</p>
+<div class="chat">
+ <div class="msg u"><small>你输入</small>法国的首都是哪里？</div>
+ <div class="msg b"><small>基础模型可能续写（示意）</small>德国的首都是哪里？意大利的首都是哪里？以下是欧洲各国首都的选择题，答案见文末……</div>
+</div>
+<p>它并不笨：这串问题说明它见过很多「地理题列表」这样的网页，而且很可能知道答案是巴黎。只是它的本能是「续写文档」，而不是「回答你」。Karpathy 把它形容为「互联网文档模拟器」。想让它变成有问必答的助手，还要经过下一篇的<b>后训练</b>。</p>
+<p>另外两件事也在这一步就定下了：</p>
+<ul>
+<li><b>知识截止日期</b>：模型只知道教材里有的东西。教材收集到哪天，它的「常识」就停在哪天。</li>
+<li><b>成本</b>：预训练是最贵的一步。上一篇提到，Karpathy 估算 Llama 2 70B 的预训练要约 6000 块 GPU 跑 12 天；后面的后训练相比之下便宜得多。</li>
+</ul>
+
+<h2 id="s8"><span class="k">08</span>记住这些就够了</h2>
+<ol class="keep">
+<li>预训练 = 在海量清洗过的文字上反复<b>猜下一个 token</b>。文字本身就是题目和答案，不需要人工标注。</li>
+<li>打分用<b>损失</b>（给正确答案的概率越低罚得越重），改进靠<b>梯度下降</b>：每个旋钮朝让损失变小的方向挪一小步，学习率决定步子大小。</li>
+<li>结果是<b>基础模型</b>：知识丰富、很会续写，但还不会好好回答问题；它的知识停在教材收集的那天。</li>
+</ol>
+<!--PN-->
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Andrej Karpathy，<a href="https://www.youtube.com/watch?v=7xTGNNLPyMI" rel="noopener">Deep Dive into LLMs like ChatGPT</a>（2025）与 <a href="https://www.youtube.com/watch?v=zjkBMFhNj_g" rel="noopener">Intro to Large Language Models</a>（2023）。图书馆学徒、「压缩互联网」、基础模型是文档模拟器。</li>
+<li>Penedo 等，<a href="https://arxiv.org/abs/2406.17557" rel="noopener">The FineWeb Datasets</a>（2024）与 <a href="https://huggingface.co/datasets/HuggingFaceFW/fineweb" rel="noopener">数据集页面</a>。清洗流水线、15 万亿 token、96 次抓取。</li>
+<li><a href="https://commoncrawl.org/" rel="noopener">Common Crawl</a>。</li>
+<li>3Blue1Brown，<a href="https://www.3blue1brown.com/lessons/gradient-descent" rel="noopener">Gradient descent, how neural networks learn</a> 与 <a href="https://www.3blue1brown.com/lessons/backpropagation" rel="noopener">Backpropagation</a>。下山比方、反向传播。</li>
+<li>Radford 等，<a href="https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf" rel="noopener">GPT</a>（2018，BooksCorpus）；Radford 等，<a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" rel="noopener">GPT-2</a>（2019，WebText）；Brown 等，<a href="https://arxiv.org/abs/2005.14165" rel="noopener">GPT-3</a>（2020）。</li>
+<li>Meta，<a href="https://github.com/meta-llama/llama-models/blob/main/models/llama2/MODEL_CARD.md" rel="noopener">Llama 2 Model Card</a>（2 万亿 token、每批 400 万 token）；<a href="https://ai.meta.com/blog/meta-llama-3/" rel="noopener">Introducing Meta Llama 3</a> 与 <a href="https://arxiv.org/abs/2407.21783" rel="noopener">The Llama 3 Herd of Models</a>（超过 15 万亿 token；小模型训练远超最优配比）。</li>
+<li>Kaplan 等，<a href="https://arxiv.org/abs/2001.08361" rel="noopener">Scaling Laws for Neural Language Models</a>（2020）；Hoffmann 等，<a href="https://arxiv.org/abs/2203.15556" rel="noopener">Training Compute-Optimal Large Language Models</a>（Chinchilla，2022）。</li>
+</ol>
+<p class="note">本页图示和动画都是自己绘制的。小实验 ① 的网页是编的例子；④ 是在你浏览器里真实运行的二元语言模型。</p>

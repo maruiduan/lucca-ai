@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>上下文与提示词 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="上下文与提示词：模型到底「看到」了什么，上下文窗口、系统提示和 token 是怎么回事，怎样写好提示词。"><link rel="canonical" href="https://ai.lucca.top/context/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="上下文与提示词 · AI 是怎么回事 · lucca"><meta property="og:description" content="上下文与提示词：模型到底「看到」了什么，上下文窗口、系统提示和 token 是怎么回事，怎样写好提示词。"><meta property="og:url" content="https://ai.lucca.top/context/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 4 篇</span></nav>
+<article id="art">
+<h1>上下文与提示词：模型到底「看到」了什么</h1>
+<p class="meta-line">第一部分 · 大模型本身 · 第 4 篇　|　约 13 分钟　|　3 个小实验</p>
+<div class="lead"><small>一句话结论</small>模型每次回答前，看到的只是<strong>一长串 token</strong>：系统提示、你们之前的全部对话、你刚说的话，按固定格式拼在一起。除此之外它什么都不记得。这串东西能有多长，叫<strong>上下文窗口</strong>；写好提示词，本质上就是把这串东西喂好。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">6 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">它没有记忆：每一轮都从头读一遍</a></li>
+<li><a href="#s2">系统提示：放在最前面的「岗位说明」</a></li>
+<li><a href="#s3">上下文窗口：一次能看多长</a></li>
+<li><a href="#s4">提示词：把要求说清楚</a></li>
+<li><a href="#s5">比措辞更重要的：往上下文里放什么</a></li>
+<li><a href="#s6">记住这些就够了</a></li>
+</ol></details>
+<h2 id="s1"><span class="k">01</span>它没有记忆：每一轮都从头读一遍</h2>
+<p>和聊天机器人聊了十几轮，它好像记得你说过的一切。其实模型本身<b>不记得任何事</b>：参数在训练完以后就固定了，聊天不会改变它。它「记得」，是因为聊天软件每一轮都把<b>之前的全部对话</b>重新发给它，让它从头读一遍，再接着写下一段回答。</p>
+<p>可以把它想成一位记性为零、但阅读飞快的专家：每次你提问，助理都把整本对话记录递给他，他读完再回答。你说「它讲的是什么」，他能知道「它」指哪部电影，全靠记录里写着。</p>
+<div class="demo" id="chat-demo">
+ <div class="demo-h"><b>小实验 ①：拼一次对话，看模型收到什么</b><span class="badge">格式为示意</span></div>
+ <div class="lbl">系统提示（由做产品的人设定，用户一般看不到）：</div>
+ <div class="row seg" id="cd-sys"></div>
+ <div class="chat" id="cd-chat"></div>
+ <div class="row"><button class="pri" id="cd-next">下一轮 ▶</button><button id="cd-reset">重来</button><button class="tgl" id="cd-forget">不把历史发过去（关）</button></div>
+ <div class="lbl">这一轮真正送进模型的整串文字（约 <b id="cd-n">0</b> 个 token，按每字约 1 个粗算）：</div>
+ <div class="rawbox" id="cd-raw"></div>
+ <p class="lbl">回答都是我们手写的示意。注意每一轮这串文字都从头开始、越来越长；打开「不把历史发过去」，看模型为什么突然听不懂「它」。</p>
+</div>
+
+<h2 id="s2"><span class="k">02</span>系统提示：放在最前面的「岗位说明」</h2>
+<p>那串文字的最开头，通常是一段<strong>系统提示</strong>（system prompt），由做产品的人写：你是谁、用什么语气、能做什么不能做什么、今天几号。它每一轮都会被放在最前面，所以对整场对话影响很大。上一篇讲过，模型在后训练时就学过「系统提示的话要格外重视」。</p>
+<p>这也解释了为什么同一个模型，在不同的 App 里「性格」不一样：底下也许是同一个模型，只是系统提示不同。</p>
+
+<h2 id="s3"><span class="k">03</span>上下文窗口：一次能看多长</h2>
+<p>模型一次能读进去的 token 数是有上限的，叫<strong>上下文窗口</strong>。它从早年的一两千个 token，增长到今天的几十万甚至上百万个：</p>
+<div class="hscroll"><table class="t">
+<tr><th>模型</th><th>年份</th><th>上下文窗口</th></tr>
+<tr><td>GPT-2</td><td>2019</td><td>1,024 个 token</td></tr>
+<tr><td>GPT-3</td><td>2020</td><td>2,048 个 token</td></tr>
+<tr><td>GPT-4 Turbo</td><td>2023</td><td>128,000 个 token（超过 300 页文字）</td></tr>
+<tr><td>Gemini 1.5 Pro</td><td>2024</td><td>预览版最多 100 万个 token</td></tr>
+</table></div>
+<p>为什么不能无限长？第 1 篇讲过，注意力要让每个 token 和前面的每个 token 都「比一比」。长度翻一倍，要比较的对数就翻四倍，算力和内存都跟着涨。装满以后，聊天软件只好丢掉最早的内容，或者把旧对话压缩成一段摘要再放进去。</p>
+<div class="demo" id="win-demo">
+ <div class="demo-h"><b>小实验 ②：窗口装满了会怎样</b><span class="badge">玩具长度</span></div>
+ <div class="row seg" id="wd-mode"></div>
+ <div class="win-strip" id="wd-strip" aria-label="上下文窗口"></div>
+ <div class="legend"><span><i style="background:var(--blue)"></i>系统提示</span><span><i style="background:var(--gold)"></i>你贴进来的长文档</span><span><i style="background:var(--accent)"></i>你说的话</span><span><i style="background:var(--green)"></i>模型的回答</span><span><i style="background:#7b5ea7"></i>旧对话摘要</span></div>
+ <div class="temp-wrap">
+  <div class="temp-row"><span>已聊轮数 <span class="temp-val" id="wd-tv">4</span></span><span>窗口：2,000 个 token（玩具）</span></div>
+  <input type="range" id="wd-t" min="1" max="16" value="4" aria-label="已聊轮数">
+ </div>
+ <div class="kpis"><div class="kpi">装进窗口<b class="ac" id="wd-in">–</b></div><div class="kpi">被挤出去<b id="wd-out">–</b></div><div class="kpi">注意力要比的词对<b id="wd-pairs">–</b></div></div>
+ <p class="lbl" id="wd-cap"></p>
+</div>
+<p>窗口够大也不等于都能用好。2023 年斯坦福等的研究《Lost in the Middle》发现：把关键信息放在长上下文的<b>开头或结尾</b>，模型用得最好；放在<b>中间</b>，效果明显变差。所以重要的要求，放在提示的开头或结尾更稳妥。</p>
+
+<h2 id="s4"><span class="k">04</span>提示词：把要求说清楚</h2>
+<p>既然模型看到的只有这串文字，提示词写得好不好，就直接决定回答好不好。OpenAI 和 Anthropic 的官方指南给的建议大同小异：</p>
+<ul>
+<li><b>说清楚任务和用途</b>：要什么、给谁看、用来干嘛；</li>
+<li><b>给背景</b>：它不知道你的处境，你不说它只能猜；</li>
+<li><b>给例子</b>：一两个示范，比一大段描述更管用；</li>
+<li><b>规定格式</b>：要几条、多长、用表格还是列表；</li>
+<li><b>允许它说不知道</b>，复杂问题<b>让它一步步想</b>（第 5、7 篇会讲为什么）。</li>
+</ul>
+<div class="demo" id="pr-demo">
+ <div class="demo-h"><b>小实验 ③：给提示词加积木</b><span class="badge">示意回答</span></div>
+ <p class="lbl">任务：「解释为什么天空是蓝色的」。点下面的积木，加进提示词，看回答怎么变。</p>
+ <div class="row seg" id="pr-blocks"></div>
+ <div class="rawbox" id="pr-prompt"></div>
+ <div class="msg b" id="pr-ans" style="max-width:100%"></div>
+ <p class="lbl">回答是我们手写的示意，用来说明「说得越清楚，回答越贴合」，不是某个真实模型的原话。</p>
+</div>
+<p>「给例子」背后有个专门的名字：<strong>上下文学习</strong>（in-context learning）。2020 年的 GPT-3 论文发现，不用重新训练，只要在提示里放几个「输入 → 输出」的示范，模型就能照着做新任务。比如：</p>
+<div class="rawbox">苹果 → 水果
+胡萝卜 → 蔬菜
+香蕉 → 水果
+土豆 → <span class="sp">？</span></div>
+<p>模型会接上「蔬菜」。它没有因此「学会」分类，参数一点没变；它只是在上下文里看出了规律，顺着规律往下接。这也正是第 1 篇那个「猜下一个字」的本事。</p>
+
+<h2 id="s5"><span class="k">05</span>比措辞更重要的：往上下文里放什么</h2>
+<p>写提示词，常被当成找「咒语」。但读到这里你会发现，更关键的是<b>把对的信息放进那串文字里</b>：相关的资料、清楚的要求、合适的例子。这件事越来越被称为「上下文工程」。</p>
+<p>后面几篇都和它有关：第 6 篇的 RAG，就是自动把相关资料检索出来塞进上下文；第二部分的智能体，则是让模型一边干活、一边把工具的结果不断加进上下文。</p>
+
+<div class="box"><b>延伸阅读：</b>这一篇讲的是一问一答时怎么用好上下文。到了会自己调用工具、一干就是上百步的智能体，上下文会越堆越满，怎么取舍就成了一门专门的手艺，见第二部分的<a href="../context-eng/">《上下文工程》</a>。</div>
+<h2 id="s6"><span class="k">06</span>记住这些就够了</h2>
+<ol class="keep">
+<li>模型没有记忆。每一轮，App 都把<b>系统提示 + 全部历史 + 你的新消息</b>拼成一串 token 发给它，它只根据这串东西回答。</li>
+<li><b>上下文窗口</b>是这串东西的长度上限；装满后旧内容会被丢掉或压缩，而放在中间的信息也更容易被忽略。</li>
+<li>好提示词 = 说清楚任务、给背景、给例子、定格式。<b>放进上下文的信息</b>，比措辞技巧更重要。</li>
+</ol>
+<div class="pn">
+ <a href="../posttrain/"><small>← 上一篇</small>后训练</a>
+ <a class="nx" href="../hallucination/"><small>下一篇 →</small>幻觉与局限</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>OpenAI，<a href="https://platform.openai.com/docs/guides/prompt-engineering" rel="noopener">Prompt engineering 指南</a>；Anthropic，<a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" rel="noopener">Prompt engineering overview</a>。</li>
+<li>Brown 等，<a href="https://arxiv.org/abs/2005.14165" rel="noopener">Language Models are Few-Shot Learners</a>（GPT-3，2020）。上下文学习、2048 token 窗口。</li>
+<li>Jay Alammar，<a href="https://jalammar.github.io/illustrated-gpt2/" rel="noopener">The Illustrated GPT-2</a>。GPT-2 的 1024 token 窗口。</li>
+<li>OpenAI，<a href="https://openai.com/index/new-models-and-developer-products-announced-at-devday/" rel="noopener">New models and developer products announced at DevDay</a>（2023）。GPT-4 Turbo 128K 窗口、约 300 页。</li>
+<li>Google，<a href="https://blog.google/technology/ai/google-gemini-next-generation-model-february-2024/" rel="noopener">Introducing Gemini 1.5</a>（2024）。100 万 token 预览。</li>
+<li>Liu 等，<a href="https://arxiv.org/abs/2307.03172" rel="noopener">Lost in the Middle: How Language Models Use Long Contexts</a>（2023）。</li>
+</ol>
+<p class="note">本页的对话、回答和 token 数都是示意或玩具数字，已在各处标明；表格里的窗口大小来自上面的官方资料。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="context.js?v=3"></script>
+</body>
+</html>

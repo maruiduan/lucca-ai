@@ -1,0 +1,91 @@
+<!--title: 幻觉与局限：它为什么会一本正经地胡说-->
+<!--short: 幻觉与局限-->
+<!--meta: 第一部分 · 大模型本身 · 第 5 篇　|　约 13 分钟　|　3 个小实验-->
+<!--lead: 「幻觉」不是偶发的故障，而是模型工作方式的自然结果：它总在生成<strong>最像样</strong>的下一个 token，而像样不等于真实；训练和评测又常常<strong>奖励大胆猜、不奖励说「不知道」</strong>。知道它在哪儿容易错，才能放心地用它。-->
+
+<h2 id="s1"><span class="k">01</span>什么是幻觉</h2>
+<p>OpenAI 对幻觉的定义很直白：<b>模型自信地给出一个不真实的答案</b>。它不是在撒谎（它没有「想骗你」的意图），而是像一个考场上的学生，把拿不准的东西写得有模有样。</p>
+<p>最出名的教训发生在 2023 年的美国：一家律所在法庭文件里引用了好几个由 ChatGPT 提供的判例，案名、法院、引文一应俱全，结果全是编的。法官发现后，对律师处以 5000 美元罚款。这就是 Mata v. Avianca 案。</p>
+<p>为什么会这样？下面拆成两个根源，再看几个「天生」的短板。</p>
+
+<h2 id="s2"><span class="k">02</span>根源一：它学的是「像」，不是「真」</h2>
+<p>第 2 篇讲过，预训练只要求模型把下一个 token 猜得像网上的文字。语法、常识、反复出现的事实，它能学得很好；可那些<b>在教材里只出现过一两次</b>的冷门事实，比如某个普通人的生日、某篇小论文的标题，它没有足够的「证据」记住，只能按「看起来像」去编一个。</p>
+<p>2025 年 OpenAI 的研究者在论文《Why Language Models Hallucinate》里把这一点算得更清楚：举例来说，如果某类事实（比如生日）里有 20% 在训练数据中只出现过一次，那么基础模型在这类问题上，预计至少有约 20% 会答错。</p>
+<div class="demo" id="fam-demo">
+ <div class="demo-h"><b>小实验 ①：问熟题和冷题，各问 5 遍</b><span class="badge">玩具概率</span></div>
+ <div class="row seg" id="fam-q"></div>
+ <div class="msg u" id="fam-prompt" style="max-width:100%"></div>
+ <div class="lbl" style="margin-top:8px">模型给下一个 token 的概率（示意）：</div>
+ <div class="cands" id="fam-bars"></div>
+ <div class="row"><button class="pri" id="fam-ask">问 5 遍</button></div>
+ <div class="vote" id="fam-ans"></div>
+ <p class="lbl" id="fam-cap"></p>
+ <p class="lbl">概率是我们为演示设的。「多问几遍看答案是否一致」是一种真实的检测幻觉的思路（如 SelfCheckGPT），但一致也不保证正确。</p>
+</div>
+<p>要点在于：模型<b>不会因为不知道就停下来</b>。不管概率表是尖是平，它都会从里面抽一个字写出来，而且写得同样流畅。你从语气里分辨不出它有没有把握。</p>
+
+<h2 id="s3"><span class="k">03</span>根源二：考试鼓励瞎猜</h2>
+<p>同一篇论文还指出了第二个原因：模型的「成绩单」大多只看<b>准确率</b>。就像选择题考试：不会的题空着肯定是 0 分，蒙一个还有机会得分。只看准确率的话，<b>爱猜的模型永远比老实说「不知道」的模型分高</b>。模型被一轮轮按这种成绩优化，自然就学会了猜。</p>
+<p>OpenAI 在博客里给了一组真实数据（SimpleQA 测试）：较新的 gpt-5-thinking-mini 有 52% 的题选择不答，答对 22%，答错 26%；较早的 o4-mini 几乎题题都答（只有 1% 不答），答对 24%，但答错高达 75%。只看准确率，老模型还略胜一筹。</p>
+<div class="demo" id="exam-demo">
+ <div class="demo-h"><b>小实验 ②：100 道题，什么时候该开口？</b><span class="badge">模拟 · 按期望计算</span></div>
+ <p class="lbl">一个模型面对 100 道题，每题有不同的把握（假设把握就是答对的概率）。设一个门槛：把握高于门槛才作答，否则说「不知道」。</p>
+ <canvas class="plot pan" id="exam-cv" width="640" height="260" aria-label="不同门槛下的得分"></canvas>
+ <div class="legend"><span><i style="background:var(--blue)"></i>只算答对（答错不扣分）</span><span><i style="background:var(--accent)"></i>答错扣分</span></div>
+ <div class="temp-wrap">
+  <div class="temp-row"><span>作答门槛：把握 &gt; <span class="temp-val" id="ex-tv">0%</span></span></div>
+  <input type="range" id="ex-t" min="0" max="95" step="5" value="0" aria-label="作答门槛">
+ </div>
+ <div class="row seg" id="ex-pen"></div>
+ <div class="kpis"><div class="kpi">答对<b id="ex-a">–</b></div><div class="kpi">答错（幻觉）<b class="ac" id="ex-e">–</b></div><div class="kpi">说「不知道」<b id="ex-s">–</b></div><div class="kpi">只算答对的分<b id="ex-s1">–</b></div><div class="kpi">答错扣分的分<b id="ex-s2">–</b></div></div>
+ <p class="lbl" id="ex-cap"></p>
+</div>
+<p>论文的建议也很朴素：<b>改评分规则</b>。答错要比不答扣得更多，并在题目里写明门槛，例如「把握超过 75% 才回答，答错扣 3 分」。这样，诚实地说「不确定」才不吃亏。</p>
+
+<h2 id="s4"><span class="k">04</span>后训练的影响：自信与讨好</h2>
+<p>还有一个有意思的发现来自 GPT-4 的技术报告：<b>只经过预训练的模型，「把握」和「实际正确率」对得很准</b>（说七成把握时，大约就对七成）；经过后训练后，这种对应反而变差了。也就是说，教它「好好回答」的同时，可能也教它显得比实际更自信。</p>
+<p>第 3 篇讲过的<b>谄媚</b>也是一种局限：你坚持一个错误说法，它可能就顺着你改口。</p>
+
+<h2 id="s5"><span class="k">05</span>几个「天生」的短板</h2>
+<p>有些错误和幻觉不同，来自模型的结构本身：</p>
+<ul>
+<li><b>数字母、数笔画</b>：第 1 篇讲过，模型看到的是 token，不是一个个字母。下面就是著名的「strawberry 里有几个 r」难题。</li>
+<li><b>大数计算</b>：每个 token 只经过固定的计算量，一口气心算多位数乘法很容易错。让它分步写（第 7 篇），或者调用计算器（第二部分），会可靠得多。</li>
+<li><b>知识截止</b>：训练数据之后发生的事它不知道，除非你告诉它，或者让它去查（下一篇）。</li>
+<li><b>长上下文的中间</b>：第 4 篇讲过，放在长文本中间的信息更容易被忽略。</li>
+</ul>
+<div class="demo" id="tok-demo">
+ <div class="demo-h"><b>小实验 ③：模型眼里的 strawberry</b><span class="badge">切法为示意</span></div>
+ <p class="lbl">问：「strawberry 这个单词里有几个字母 r？」先看模型「看到」的样子：</p>
+ <div class="chips" id="sb-chips"></div>
+ <div class="row"><button class="pri" id="sb-open">拆开看看里面的字母</button></div>
+ <p id="sb-cap" style="min-height:3.4em"></p>
+ <p class="lbl">真实切法因模型而异，但通常是几块，而不是 10 个字母。模型得「记住」每块 token 由哪些字母组成，才能数对。让它先把字母一个个写出来再数，就能大大减少错误。</p>
+</div>
+
+<h2 id="s6"><span class="k">06</span>怎么和它打交道</h2>
+<ol class="steps">
+<li><b>重要的事要核对</b>：数字、日期、人名、引用、法律和医疗信息，一律当作「待核实」。</li>
+<li><b>让它给出处</b>，并点开看；更好的办法是让它先搜索或基于你给的资料回答（下一篇的 RAG）。</li>
+<li><b>允许它说不知道</b>：在提示里写上「不确定就直说」。</li>
+<li><b>换个问法、多问几遍</b>：答案前后不一致，就是危险信号。</li>
+<li><b>计算和数数交给工具</b>，或者让它一步步写出过程。</li>
+</ol>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li>幻觉 = 自信地说错。根源在于模型学的是「像真话」，冷门事实证据太少，它也照样会流畅地编。</li>
+<li>只看准确率的评测会<b>奖励瞎猜</b>；让答错比不答扣得多，才能鼓励模型说「不知道」。</li>
+<li>它还有结构性短板：数字母、大数计算、知识截止、长文中间的信息。重要信息要<b>核对出处</b>，必要时让它查资料或用工具。</li>
+</ol>
+<!--PN-->
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>OpenAI，<a href="https://openai.com/index/why-language-models-hallucinate/" rel="noopener">Why language models hallucinate</a>（2025 博客）；Kalai 等，<a href="https://arxiv.org/abs/2509.04664" rel="noopener">Why Language Models Hallucinate</a>（论文）。定义、只出现一次的事实、评测鼓励猜测、SimpleQA 数据、改评分规则。</li>
+<li>OpenAI，<a href="https://arxiv.org/abs/2303.08774" rel="noopener">GPT-4 Technical Report</a>（2023）。预训练模型校准良好、后训练后校准变差。</li>
+<li>Manakul 等，<a href="https://arxiv.org/abs/2303.08896" rel="noopener">SelfCheckGPT</a>（2023）。多次采样检查一致性。</li>
+<li>Wikipedia，<a href="https://en.wikipedia.org/wiki/Mata_v._Avianca,_Inc." rel="noopener">Mata v. Avianca, Inc.</a>（2023）。</li>
+<li>Andrej Karpathy，<a href="https://www.youtube.com/watch?v=7xTGNNLPyMI" rel="noopener">Deep Dive into LLMs like ChatGPT</a>（2025）。幻觉的来源与缓解、模型看到的是 token、数数与计算的短板。</li>
+<li>Liu 等，<a href="https://arxiv.org/abs/2307.03172" rel="noopener">Lost in the Middle</a>（2023）。</li>
+</ol>
+<p class="note">小实验里的概率和题目把握都是为了演示而设定的，计算按期望值进行；SimpleQA 等数字引自 OpenAI 公开资料。</p>

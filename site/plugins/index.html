@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>扩展与插件 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="扩展与插件：从 2023 年的 ChatGPT 插件到今天把命令、Skill、MCP、钩子打成一个包的插件。"><link rel="canonical" href="https://ai.lucca.top/plugins/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="扩展与插件 · AI 是怎么回事 · lucca"><meta property="og:description" content="扩展与插件：从 2023 年的 ChatGPT 插件到今天把命令、Skill、MCP、钩子打成一个包的插件。"><meta property="og:url" content="https://ai.lucca.top/plugins/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+<style>
+.chk{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.pk{border:1px dashed var(--line);border-radius:12px;padding:8px 10px;margin:10px 0;background:var(--bg);font:13px/1.75 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+.pk .on{color:var(--ink)}.pk .of{color:var(--sub);opacity:.45}
+.cmp{display:grid;gap:6px;margin:10px 0}
+.cl{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg);font-size:14px;line-height:1.55}
+.cl code{font-size:12.5px;word-break:break-all}.cl .st{font-size:12px;white-space:nowrap;padding:1px 7px;border-radius:999px;border:1px solid var(--line)}
+.cl.blk{border-color:var(--green)}.cl.blk .st{color:var(--green);border-color:var(--green)}
+.cl.bad{border-color:var(--accent);background:var(--soft)}.cl.bad .st{color:var(--accent);border-color:var(--accent)}
+.verdict{border-radius:12px;padding:9px 12px;margin:10px 0;font-size:15px;line-height:1.7;border:1px solid var(--line)}
+.verdict.ok{border-color:var(--green)}.verdict.bad{border-color:var(--accent);background:var(--soft)}
+.tl{list-style:none;padding:0;margin:10px 0;border-left:2px solid var(--line)}
+.tl li{position:relative;padding:4px 0 10px 16px;font-size:15px;line-height:1.7}
+.tl li:before{content:"";position:absolute;left:-6px;top:11px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.tl b{font-size:13px;color:var(--accent);display:block}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 14 篇</span></nav>
+<article id="art">
+<h1>扩展与插件：把一整套本事打包装进软件</h1>
+<p class="meta-line">第二部分 · 智能体 · 第 6 篇　|　约 13 分钟　|　3 个小实验</p>
+<div class="lead"><small>一句话结论</small>前两篇的 MCP 服务器和 Skill 各管一件事。真到团队里用，你会想把「连 Jira 的服务器 + 写周报的 Skill + 几个常用命令 + 一条安全规则」<strong>打成一个包，一键装给所有人</strong>。这就是今天智能体软件里的<strong>插件</strong>。它和三年前 ChatGPT 的「插件」同名，但已经是另一种东西。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">「插件」这个词的两代</a></li>
+<li><a href="#s2">一个插件里装着什么</a></li>
+<li><a href="#s3">谁来触发：四种扩展点</a></li>
+<li><a href="#s4">钩子：不靠模型自觉的规矩</a></li>
+<li><a href="#s5">插件市场和装之前要看什么</a></li>
+<li><a href="#s6">和浏览器扩展、手机应用比</a></li>
+<li><a href="#s7">记住这些就够了</a></li>
+</ol></details>
+
+<h2 id="s1"><span class="k">01</span>「插件」这个词的两代</h2>
+<ul class="tl">
+<li><b>2023 年 3 月 23 日</b>OpenAI 推出 <b>ChatGPT 插件</b>：第三方（首批有 Expedia、Instacart、Wolfram、Zapier 等）提供一个接口描述，ChatGPT 把它当工具调用。本质就是<a href="../tools/">工具调用</a>，只是工具由外部公司提供。</li>
+<li><b>2023 年 11 月 6 日</b>OpenAI 推出 <b>GPTs</b>（自定义的 ChatGPT，可以带说明、知识文件和外部动作），用的人越来越多。</li>
+<li><b>2024 年 3 月 19 日</b>插件商店关闭，不能再开新的插件对话；4 月 9 日旧对话也停用。OpenAI 的说明是：插件测试期商店里有<b>一千多个</b>插件，而 GPT 商店已有几十万个 GPT，于是收掉插件。</li>
+<li><b>2024 年 11 月</b>MCP 发布，「把外部服务接给 AI」有了跨厂商的标准（<a href="../mcp/">第 4 篇</a>）。</li>
+<li><b>2025 年 10 月 9 日</b>Anthropic 给编程智能体 Claude Code 推出<b>插件</b>：把<b>命令、子智能体、MCP 服务器、钩子</b>打成一个包，一条命令安装；之后又加入了 Skill。</li>
+<li><b>现在</b>：OpenAI 的开发者文档里，ChatGPT 和 Codex 的插件也是「<b>Skill + MCP 服务器</b>」打包而成。各家的说法开始趋同。</li>
+</ul>
+<p>所以第一代插件 ≈ 「给 AI 加一个工具」；新一代插件 ≈ 「给 AI 装一整套<b>工具 + 经验 + 规矩</b>」，而且里面的零件大多是开放格式。</p>
+
+<h2 id="s2"><span class="k">02</span>一个插件里装着什么</h2>
+<p>以 Claude Code 的插件为例，它是一个文件夹，带一个清单文件 <code>.claude-plugin/plugin.json</code>（写名字、版本、简介），其余是各种零件。勾选下面的零件，看这个「市场部工具包」插件会变成什么样：</p>
+<div class="demo" id="pk-demo">
+ <div class="demo-h"><b>小实验 ①：组装一个插件</b><span class="badge">示例</span></div>
+ <div class="chk" id="pk-sw"></div>
+ <div class="pk" id="pk-tree"></div>
+ <div class="hscroll"><table class="t" id="pk-t"></table></div>
+ <p class="pipe-cap" id="pk-cap" style="min-height:3em"></p>
+ <p class="lbl">⚠️ 文件结构按 Claude Code 插件的约定简化；「平时占多少上下文」是示意，具体看各零件写多长。</p>
+</div>
+<p>要点：这些零件<b>单独也能用</b>。官方文档原话的意思是：Skill、子智能体、钩子、MCP 服务器都可以不靠插件单独装；只有当你想把几样东西<b>一起分享、一起更新</b>时，才需要打成插件。插件是「包装」，不是新能力。</p>
+
+<h2 id="s3"><span class="k">03</span>谁来触发：四种扩展点</h2>
+<p>插件里的零件，最大的区别在于<b>谁按下开关</b>：</p>
+<div class="hscroll"><table class="t">
+<tr><th>零件</th><th>谁触发</th><th>适合</th></tr>
+<tr><td><b>命令</b>（斜杠命令）</td><td><b>你</b>输入 <code>/review</code></td><td>固定流程：审代码、写提交说明</td></tr>
+<tr><td><b>Skill</b></td><td><b>模型</b>看描述觉得用得上</td><td>做某类事的经验（第 5 篇）</td></tr>
+<tr><td><b>MCP 服务器</b></td><td><b>模型</b>决定调哪个工具</td><td>连外部服务（第 4 篇）</td></tr>
+<tr><td><b>子智能体</b></td><td><b>模型</b>决定派活（也可以你点名）</td><td>独立上下文干专门的活（第 7 篇）</td></tr>
+<tr><td><b>钩子</b> hooks</td><td><b>程序</b>在固定时刻自动运行</td><td>必须每次都执行的规矩</td></tr>
+</table></div>
+
+<h2 id="s4"><span class="k">04</span>钩子：不靠模型自觉的规矩</h2>
+<p>你可以在系统提示里写「不要动 .env 文件」「不要执行 rm -rf」。模型<b>大多数时候</b>会听，但不是百分之百：上下文一长、任务一急，或者读到了一段带偏它的文字，就可能忘掉。</p>
+<p><b>钩子</b>是另一种思路：在智能体生命周期的固定时刻（比如「调用工具之前」PreToolUse、「调用工具之后」PostToolUse）自动运行一段<b>普通程序</b>。这段程序看到要执行的命令，可以直接拒绝。它不是模型，不会被说服，也不会忘。</p>
+<div class="demo" id="hk-demo">
+ <div class="demo-h"><b>小实验 ②：同样的六次工具调用，靠提示 vs 靠钩子</b><span class="badge">模拟</span></div>
+ <div class="seg" id="hk-m"><button class="on">只在提示里写规矩</button><button>加上 PreToolUse 钩子</button></div>
+ <div class="row" style="margin-top:8px"><button class="tgl" id="hk-inj">中途读到一段恶意文字：关</button></div>
+ <div class="cmp" id="hk-list"></div>
+ <div class="verdict" id="hk-r"></div>
+ <p class="lbl">⚠️ 规矩：不准改 .env、不准 rm -rf、git push 前必须跑测试。「只靠提示时第 4 步违规」是为演示安排的，真实频率取决于模型和场景。</p>
+</div>
+<p>钩子也能做「加法」：每次改完文件自动跑一遍代码格式化（PostToolUse），任务结束时发个通知。原则是：<b>必须每次都发生的事，交给程序；需要判断的事，交给模型</b>。</p>
+
+<h2 id="s5"><span class="k">05</span>插件市场和装之前要看什么</h2>
+<p>Claude Code 的插件通过「市场」（marketplace）分发：市场其实就是一个列出插件的清单，可以是官方的、社区的，也可以是公司内部的，一条命令添加。方便的另一面是：<b>装一个插件，等于一次性信任了里面所有零件</b>。</p>
+<div class="demo" id="rv-demo">
+ <div class="demo-h"><b>小实验 ③：装之前，看看它要什么</b><span class="badge">示例插件</span></div>
+ <div class="seg" id="rv-p"><button class="on">代码格式化助手</button><button>「免费 AI 加速器」</button><button>公司内部工具包</button></div>
+ <div class="cmp" id="rv-list"></div>
+ <div class="verdict" id="rv-r"></div>
+ <p class="lbl">⚠️ 三个插件都是虚构的；风险判断是常识性的示例，不是某个产品的官方审核规则。</p>
+</div>
+<p>插件里的钩子和脚本是<b>直接在你电脑上运行的代码</b>，MCP 服务器能往模型眼前塞字（第 4 篇的工具投毒），Skill 能给模型下指令。所以「看来源、看它装了什么、看它要什么权限」三件事，一件都不能省。</p>
+
+<h2 id="s6"><span class="k">06</span>和浏览器扩展、手机应用比</h2>
+<p>这套东西其实是软件行业的老路：浏览器有扩展商店，手机有应用商店，编辑器有插件市场。共同的经验是：</p>
+<ul>
+<li><b>标准化</b>让生态起来：一次写好，处处能装。MCP 和 Skill 的开放格式就在做这件事。</li>
+<li><b>权限要细</b>：手机应用要相机得单独问你。智能体插件目前还在补这一课，比如对每个工具单独设「总是允许 / 每次询问 / 禁止」。</li>
+<li><b>商店要管</b>：上架审核、举报下架、签名验证。开放市场越大，越需要这些。</li>
+</ul>
+<p>区别在于：浏览器扩展是人写死的代码，行为是固定的；智能体插件里有一大半是<b>给模型读的文字</b>，行为取决于模型怎么理解。这让它更灵活，也更难审。</p>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li>第一代「插件」（ChatGPT，2023–2024）≈ 外部公司提供的工具；新一代插件 ≈ <b>命令 + Skill + MCP 服务器 + 子智能体 + 钩子</b>的打包。</li>
+<li>插件只是包装，方便<b>一起分享、一起更新</b>；零件单独也能用。</li>
+<li>分清谁触发：命令是<b>你</b>，Skill/工具/子智能体是<b>模型</b>，钩子是<b>程序</b>。</li>
+<li>必须每次都遵守的规矩用<b>钩子</b>，别只写在提示里。</li>
+<li>装插件 = 信任里面所有代码和文字。看来源、看内容、看权限。</li>
+</ol>
+<div class="pn">
+ <a href="../skill/"><small>← 上一篇</small>Skill</a>
+ <a class="nx" href="../memory/"><small>下一篇 →</small>记忆与子任务</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>OpenAI，<a href="https://web.archive.org/web/20230323213712/openai.com/blog/chatgpt-plugins" rel="noopener">ChatGPT plugins</a>（2023 年 3 月 23 日，存档）。首批插件名单。</li>
+<li>OpenAI，<a href="https://openai.com/index/introducing-gpts/" rel="noopener">Introducing GPTs</a>（2023 年 11 月 6 日）。可带说明、额外知识和自定义动作（actions）；GPT 商店同月晚些时候上线。</li>
+<li>OpenAI 帮助中心，<a href="https://help.openai.com/en/articles/8988022-winding-down-the-chatgpt-plugins-beta" rel="noopener">Winding down the ChatGPT plugins beta</a>（2024）。3 月 19 日、4 月 9 日，一千多个插件 vs 几十万个 GPT。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/news/claude-code-plugins" rel="noopener">Customize Claude Code with plugins</a>（2025 年 10 月 9 日）。命令、子智能体、MCP 服务器、钩子，市场。</li>
+<li>Claude Code 文档，<a href="https://code.claude.com/docs/en/plugins" rel="noopener">Plugins</a>：.claude-plugin/plugin.json、零件可单独使用；<a href="https://code.claude.com/docs/en/hooks" rel="noopener">Hooks</a>：PreToolUse、PostToolUse 等事件。</li>
+<li>OpenAI 开发者文档，<a href="https://developers.openai.com/plugins" rel="noopener">Plugins</a>：「把 Skill 和 MCP 服务器组合成可安装的插件」。</li>
+</ol>
+<p class="note">本页三个小实验里的插件、命令和工具调用都是虚构示例。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="plugins.js?v=1"></script>
+</body>
+</html>

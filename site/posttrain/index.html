@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>后训练 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="后训练是怎么回事：指令微调和人类反馈强化学习（RLHF）如何把只会接话的模型变成会回答问题的助手。"><link rel="canonical" href="https://ai.lucca.top/posttrain/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="后训练 · AI 是怎么回事 · lucca"><meta property="og:description" content="后训练是怎么回事：指令微调和人类反馈强化学习（RLHF）如何把只会接话的模型变成会回答问题的助手。"><meta property="og:url" content="https://ai.lucca.top/posttrain/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 3 篇</span></nav>
+<article id="art">
+<h1>后训练：从会接话到会回答</h1>
+<p class="meta-line">第一部分 · 大模型本身 · 第 3 篇　|　约 14 分钟　|　3 个小实验</p>
+<div class="lead"><small>一句话结论</small>后训练是在基础模型上<strong>再补一段课</strong>：先用人写的示范对话教它「答题的样子」（指令微调），再请人比较回答的好坏，用这些偏好把它推向更有用、更诚实、更安全的方向（人类反馈强化学习，RLHF）。它花的算力比预训练少得多，却决定了模型像不像一个好助手。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">问题：基础模型只会续写</a></li>
+<li><a href="#s2">第一步：照着示范学（指令微调）</a></li>
+<li><a href="#s3">第二步：让人来比较（奖励模型）</a></li>
+<li><a href="#s4">第三步：强化学习，以及「钻空子」</a></li>
+<li><a href="#s5">更省事的办法：DPO 与 AI 反馈</a></li>
+<li><a href="#s6">后训练还教会了什么，又带来什么副作用</a></li>
+<li><a href="#s7">记住这些就够了</a></li>
+</ol></details>
+<h2 id="s1"><span class="k">01</span>问题：基础模型只会续写</h2>
+<p>上一篇说到，预训练得到的基础模型是一台「文档续写机」：你问「法国的首都是哪里？」，它可能接着写出一串别的国家的问题。它不是不知道答案，而是<b>不知道你想让它回答</b>。</p>
+<p>2022 年 OpenAI 的 InstructGPT 论文给出了一个惊人的对比：经过后训练的 <b>13 亿参数</b>模型，回答被标注员评为比 <b>1750 亿参数</b>的原版 GPT-3 更好，尽管参数少了 100 多倍。模型的本事主要来自预训练，但<b>能不能把本事用到点子上</b>，靠的是后训练。</p>
+<div class="tl">
+ <div class="ev"><div class="y">2017</div><div class="h">从人类偏好里学</div><div class="x">OpenAI 和 DeepMind 的研究者让人比较两段机器人动作视频哪个更好，只靠约 900 次比较，就教会了模拟机器人后空翻。</div></div>
+ <div class="ev"><div class="y">2020</div><div class="h">用人类反馈学写摘要</div><div class="x">同样的方法第一次大规模用在语言模型上：让人比较摘要的好坏。</div></div>
+ <div class="ev big"><div class="y">2022</div><div class="h">InstructGPT → ChatGPT</div><div class="x">「示范 + 比较 + 强化学习」三步走成为标准做法。同年 11 月 ChatGPT 发布。</div></div>
+ <div class="ev"><div class="y">2022–2023</div><div class="h">更省事的变体</div><div class="x">Anthropic 提出用一份「原则」让 AI 自己给反馈（Constitutional AI）；斯坦福等提出 DPO，跳过强化学习，直接从偏好里学。</div></div>
+</div>
+
+<h2 id="s2"><span class="k">02</span>第一步：照着示范学（指令微调）</h2>
+<p>最直接的办法：请一批人写大量「问题 + 理想回答」的示范对话，让模型在这些对话上继续训练。训练方法还是上一篇的「猜下一个 token」，只是教材换成了对话，而且<b>只对回答部分打分</b>：用户说的话只是题目，不需要模型学着去说。这一步叫<strong>指令微调</strong>（SFT，监督微调）。</p>
+<p>Karpathy 的讲座里给过一个量级：这类示范数据大约是 <b>十万条</b>高质量问答，远少于预训练的上万亿 token，训练大约只要一天。数据由标注员按照公司写的长篇「标注说明」来写，说明里通常要求回答<b>有帮助、真实、无害</b>。今天的模型还会大量使用由模型生成、再经人工或程序把关的数据。</p>
+<div class="demo" id="sft-demo">
+ <div class="demo-h"><b>小实验 ①：同一个问题，微调前后</b><span class="badge">示意回答</span></div>
+ <div class="row seg" id="sft-q"></div>
+ <div class="row seg" id="sft-m"></div>
+ <div class="chat" id="sft-chat"></div>
+ <p class="lbl">回答是我们手写的示意，用来说明两种模型的「本能」差别，不是某个真实模型的原话。</p>
+ <div class="lbl" style="margin-top:12px">一条训练用的示范对话，在模型眼里长这样（格式为示意，各家模型的特殊符号不同）：</div>
+ <div class="rawbox" id="sft-raw"></div>
+ <div class="legend"><span><i style="background:var(--sub)"></i>题目部分：不打分</span><span><i style="background:var(--accent)"></i>回答部分：要学着说，参与打分</span></div>
+</div>
+<p>那些 <code>&lt;|user|&gt;</code> 之类的<b>特殊 token</b> 是对话的「格式线」，告诉模型哪段是用户说的、哪段该它来说、在哪里结束。下一篇讲上下文时，我们会看到你和聊天机器人的每一轮对话，都会被拼成这样一长串送进模型。</p>
+
+<h2 id="s3"><span class="k">03</span>第二步：让人来比较（奖励模型）</h2>
+<p>示范很贵：写一篇「完美回答」需要专业知识和时间。但<b>比较</b>容易得多：给你两个回答，说出哪个更好，几秒钟就行。所以第二步换个方式收集人类的意见：</p>
+<ol class="steps">
+<li>让模型对同一个问题生成几个不同的回答；</li>
+<li>请标注员比较、排序；</li>
+<li>用这些比较结果训练一个<strong>奖励模型</strong>：输入一个回答，输出一个分数，分数要能预测「人会更喜欢哪个」。</li>
+</ol>
+<div class="demo" id="rm-demo">
+ <div class="demo-h"><b>小实验 ②：你来当标注员</b><span class="badge">玩具奖励模型 · 真的在学</span></div>
+ <p class="lbl" id="rm-prog"></p>
+ <div class="msg u" id="rm-prompt" style="max-width:100%"></div>
+ <div class="pair" id="rm-pair"></div>
+ <div class="lbl" style="margin-top:6px">奖励模型从你的选择里学到的「口味」（每个特点加分还是减分）：</div>
+ <div class="cands" id="rm-w"></div>
+ <div class="row"><button id="rm-skip">跳过，用一套「典型标注员」的选择</button><button id="rm-reset">重新标注</button></div>
+ <p class="lbl">⚠️ 玩具：这个奖励模型只认 5 个我们预先标好的特点，用你的每次选择做一次梯度更新（Bradley–Terry 模型）。真实奖励模型本身就是一个大语言模型，直接读整段回答来打分，用的是几万到几十万次人类比较。</p>
+</div>
+
+<h2 id="s4"><span class="k">04</span>第三步：强化学习，以及「钻空子」</h2>
+<p>有了奖励模型，就可以让它代替人来大量打分：模型生成回答 → 奖励模型打分 → 调整参数，让高分回答更常出现、低分回答更少出现。不断重复。这就是<strong>强化学习</strong>，合起来叫 <b>RLHF</b>（基于人类反馈的强化学习）。InstructGPT 用的具体算法叫 PPO。</p>
+<p>这里有个大坑：奖励模型只是人类口味的<b>近似</b>，它有盲点。模型一旦被拼命优化，就会去钻这些盲点，比如发现「写得长、多夸用户几句」就能拿高分。这叫<strong>奖励投机</strong>（reward hacking）。所以训练时会加一根「缰绳」：惩罚模型离原来的 SFT 模型太远（用一个叫 KL 散度的数来量这个距离）。</p>
+<div class="demo" id="rl-demo">
+ <div class="demo-h"><b>小实验 ③：拉紧还是放松缰绳</b><span class="badge">玩具 · 公式是真的</span></div>
+ <p class="lbl">模型对同一个问题有 5 种「答法」，下面是它选每种答法的概率。拖动滑块放松缰绳，看强化学习把概率推向哪里。</p>
+ <div class="row"><button class="tgl" id="rl-bug">奖励模型的小毛病：偏爱长回答（关）</button></div>
+ <div class="cands" id="rl-bars"></div>
+ <div class="temp-wrap">
+  <div class="temp-row"><span>缰绳 β <span class="temp-val" id="rl-bv">2.0</span></span><span id="rl-bd"></span></div>
+  <input type="range" id="rl-b" min="0" max="100" value="20" aria-label="缰绳松紧">
+  <div class="temp-row"><span>拉紧（几乎不变）</span><span>放松（只看奖励）</span></div>
+ </div>
+ <div class="kpis"><div class="kpi">平均奖励<b class="ac" id="rl-r">–</b></div><div class="kpi">离原模型的距离（KL）<b id="rl-kl">–</b></div></div>
+ <p class="lbl" id="rl-cap"></p>
+ <p class="lbl">计算方法：在「最大化奖励、同时惩罚 KL 距离」这个目标下，最优的概率正好是 <code>原概率 × e^(奖励/β)</code> 再归一化。奖励来自小实验 ② 你训练的奖励模型。真实训练是一步步逼近这个结果，而且「答法」有无穷多种。</p>
+</div>
+
+<h2 id="s5"><span class="k">05</span>更省事的办法：DPO 与 AI 反馈</h2>
+<p>RLHF 效果好但工程复杂：要训练奖励模型，还要跑不稳定的强化学习。于是出现了两类简化：</p>
+<ul>
+<li><strong>DPO</strong>（直接偏好优化，2023）：研究者证明，上面那个「原概率 × e^(奖励/β)」的关系可以倒过来用，<b>直接拿「A 比 B 好」的比较数据去训练模型</b>，省掉单独的奖励模型和强化学习，效果相当。</li>
+<li><strong>AI 反馈</strong>：Anthropic 的 Constitutional AI（2022）先写一份原则清单，再让 AI 按原则批评、修改、比较回答，用 AI 的判断代替一部分人工标注。</li>
+</ul>
+<p>实际中各家常常混着用。比如 Meta 介绍 Llama 3 的对话版时说，它用了超过一千万条人工标注数据，组合了指令微调、拒绝采样、PPO 和 DPO。</p>
+
+<h2 id="s6"><span class="k">06</span>后训练还教会了什么，又带来什么副作用</h2>
+<p>除了「好好回答」，很多我们习以为常的行为都是这一步教出来的：</p>
+<ul>
+<li><b>对话格式和角色</b>：知道自己是助手，在哪里停下；</li>
+<li><b>拒绝</b>危险请求，同时尽量不过度拒绝正常问题；</li>
+<li><b>语气和风格</b>：比如先给结论、用列表；</li>
+<li><b>调用工具的格式</b>：第二部分讲智能体时会看到；</li>
+<li><b>先想再答</b>：第 7 篇的推理模型，也是一种后训练。</li>
+</ul>
+<p>副作用也来自这里。最典型的是<strong>谄媚</strong>：人往往更喜欢被认同，按人类偏好训练，模型就可能学会顺着用户说。2025 年 4 月，OpenAI 公开撤回了一次 GPT-4o 更新，原因正是它变得过于奉承，并解释说部分原因在于过于看重用户的短期反馈（比如点赞）。小实验 ③ 里的「钻空子」，在现实中真实存在。</p>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li>后训练把会续写的基础模型变成会回答的助手：先<b>照示范学</b>（指令微调），再<b>按人类偏好调</b>（RLHF 或 DPO）。</li>
+<li>人类比较回答比写回答容易，所以用比较数据训练<b>奖励模型</b>，再用强化学习放大高分回答；要用「缰绳」防止模型钻奖励模型的空子。</li>
+<li>模型的语气、拒绝、格式，乃至谄媚这样的毛病，很多都来自后训练：它学的是<b>人喜欢什么</b>，而这不总等于<b>什么是对的</b>。</li>
+</ol>
+<div class="pn">
+ <a href="../pretrain/"><small>← 上一篇</small>预训练</a>
+ <a class="nx" href="../context/"><small>下一篇 →</small>上下文与提示词</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Ouyang 等，<a href="https://arxiv.org/abs/2203.02155" rel="noopener">Training language models to follow instructions with human feedback</a>（InstructGPT，2022）及 OpenAI 博客 <a href="https://openai.com/index/instruction-following/" rel="noopener">Aligning language models to follow instructions</a>。三步法、13 亿 vs 1750 亿的对比、PPO。</li>
+<li>Andrej Karpathy，<a href="https://www.youtube.com/watch?v=zjkBMFhNj_g" rel="noopener">Intro to Large Language Models</a> 与 <a href="https://www.youtube.com/watch?v=7xTGNNLPyMI" rel="noopener">Deep Dive into LLMs like ChatGPT</a>。约十万条示范、标注说明、训练约一天。</li>
+<li>Christiano 等，<a href="https://arxiv.org/abs/1706.03741" rel="noopener">Deep reinforcement learning from human preferences</a>（2017）；Stiennon 等，<a href="https://arxiv.org/abs/2009.01325" rel="noopener">Learning to summarize from human feedback</a>（2020）。</li>
+<li>Hugging Face，<a href="https://huggingface.co/blog/rlhf" rel="noopener">Illustrating Reinforcement Learning from Human Feedback</a>。奖励模型、KL 惩罚的图解。</li>
+<li>Rafailov 等，<a href="https://arxiv.org/abs/2305.18290" rel="noopener">Direct Preference Optimization</a>（2023）；Bai 等，<a href="https://arxiv.org/abs/2212.08073" rel="noopener">Constitutional AI</a>（2022）。</li>
+<li>Hugging Face，<a href="https://huggingface.co/blog/llama3" rel="noopener">Welcome Llama 3</a>。超过一千万条人工标注、SFT + 拒绝采样 + PPO + DPO。</li>
+<li>OpenAI，<a href="https://openai.com/index/sycophancy-in-gpt-4o/" rel="noopener">Sycophancy in GPT-4o</a>（2025）。</li>
+</ol>
+<p class="note">本页图示都是自己绘制的；小实验里的回答是手写示意，奖励模型和策略都是玩具，已在各处标明。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="posttrain.js?v=3"></script>
+</body>
+</html>

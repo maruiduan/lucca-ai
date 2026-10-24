@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
+<title>蒸馏与量化 · AI 是怎么回事 · lucca</title>
+<!--seo--><meta name="description" content="蒸馏与量化：怎样让大模型变小、变快、变便宜，又尽量不变笨。"><link rel="canonical" href="https://ai.lucca.top/small/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="蒸馏与量化 · AI 是怎么回事 · lucca"><meta property="og:description" content="蒸馏与量化：怎样让大模型变小、变快、变便宜，又尽量不变笨。"><meta property="og:url" content="https://ai.lucca.top/small/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/ai.css?v=4">
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="sbar ui" id="sbar" aria-hidden="true"><button id="sb-toc" aria-label="打开目录">☰ 目录</button><span id="sb-cur"></span><button id="fs-m" aria-label="缩小字号">A−</button><button id="fs-p" aria-label="放大字号">A+</button></div>
+<div class="sheet ui" id="sheet" hidden><div class="sheet-bg" id="sheet-bg"></div><div class="sheet-body" role="dialog" aria-label="目录"><div class="sheet-h"><b>目录</b><button id="sheet-x" aria-label="关闭">✕</button></div><ol id="sheet-list"></ol></div></div>
+<div class="wrap">
+<nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 8 篇</span></nav>
+<article id="art">
+<h1>蒸馏与量化：让大模型变小、变快</h1>
+<p class="meta-line">第一部分 · 大模型本身 · 第 8 篇　|　约 14 分钟　|　3 个小实验</p>
+<div class="lead"><small>一句话结论</small>大模型又大又贵。<strong>蒸馏</strong>是让大模型当老师，把它的「解题思路」教给一个小模型；<strong>量化</strong>是把每个参数存得更省，比如从 16 位压到 4 位。两招配合，原本要机房才跑得动的模型，能装进一台笔记本，甚至一部手机。</div>
+<details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
+<ol>
+<li><a href="#s1">为什么要变小</a></li>
+<li><a href="#s2">蒸馏：老师把「暗知识」教给学生</a></li>
+<li><a href="#s3">量化：把每个数字存得更省</a></li>
+<li><a href="#s4">我的电脑能跑多大的模型？</a></li>
+<li><a href="#s5">开放权重与闭源模型</a></li>
+<li><a href="#s6">第一部分回顾</a></li>
+<li><a href="#s7">记住这些就够了</a></li>
+</ol></details>
+<h2 id="s1"><span class="k">01</span>为什么要变小</h2>
+<p>第 1 篇算过：模型本质上是一个装满数字（参数）的文件。按常见的 16 位精度，每个参数占 2 字节，于是 700 亿参数（70B）的模型光文件就要约 140 GB。每生成一个 token，这些数字基本都要参与一遍计算。</p>
+<p>大意味着：要昂贵的显卡、回答慢、每次调用都花钱、数据要发到别人的服务器。想让模型跑在自己的电脑或手机上、离线可用、又快又便宜，就得让它变小。主要有两条路：</p>
+<ul>
+<li><b>蒸馏</b>：换一个参数更少的小模型，让它向大模型学。</li>
+<li><b>量化</b>：参数个数不变，每个参数用更少的位数来存。</li>
+</ul>
+
+<h2 id="s2"><span class="k">02</span>蒸馏：老师把「暗知识」教给学生</h2>
+<p>2015 年，Hinton 等人在论文《Distilling the Knowledge in a Neural Network》里提出了今天常说的<b>知识蒸馏</b>。关键想法是：训练小模型（学生）时，不只告诉它标准答案，还给它看大模型（老师）的<b>整张概率表</b>。</p>
+<p>论文里的例子：一张宝马轿车的照片，老师模型几乎肯定是「轿车」，但它也给「垃圾车」留了一点点概率，给「胡萝卜」的概率则小得多。这点「错得有道理」的信息，说明了轿车和垃圾车有相似之处，而和胡萝卜毫不相干。标准答案里没有这层信息，Hinton 把它叫作<b>暗知识</b>（dark knowledge）。</p>
+<div class="demo" id="kd-demo">
+ <div class="demo-h"><b>小实验 ①：标准答案 vs 老师的概率表</b><span class="badge">真实 softmax · 分数为示意</span></div>
+ <p class="lbl">图片：一辆宝马轿车。老师模型给每个类别打了分（分数是我们设的），经过 softmax 变成概率。</p>
+ <div class="row seg" id="kd-mode"></div>
+ <div class="cands" id="kd-bars"></div>
+ <div class="temp-wrap" id="kd-tw">
+  <div class="temp-row"><span>蒸馏温度 T</span><span class="temp-val" id="kd-tv"></span></div>
+  <input type="range" id="kd-t" min="1" max="10" step=".5" value="1" aria-label="蒸馏温度">
+ </div>
+ <p class="lbl" id="kd-cap"></p>
+</div>
+<p>温度就是第 1 篇采样时那个温度：把分数除以 T 再做 softmax。T 越高，概率表越「软」，小概率里藏着的信息就越显眼，学生更容易学到。论文里用较高的温度来蒸馏。</p>
+<p>到了大语言模型时代，蒸馏常常更直接：<b>让大模型生成大量高质量的回答，拿来给小模型做监督微调</b>（第 3 篇）。两个例子：</p>
+<ul>
+<li><b>DistilBERT</b>（2019）：Hugging Face 把 BERT 蒸馏成一个小 40%、快 60% 的模型，保留了 97% 的语言理解能力。</li>
+<li><b>DeepSeek-R1 的蒸馏版</b>（2025）：用 R1 生成的约 80 万条样本，对 Qwen2.5 和 Llama 系列的 1.5B 到 70B 小模型做监督微调，不再额外做强化学习，就把「先想再答」（第 7 篇）的能力传了过去。</li>
+</ul>
+<p class="note">一个现实提醒：有些商业模型的使用条款禁止用它的输出去训练与之竞争的模型。用别人的模型当老师之前，要先看清授权。</p>
+
+<h2 id="s3"><span class="k">03</span>量化：把每个数字存得更省</h2>
+<p>参数是带小数的数字，比如 0.0137、−0.2408。电脑通常用 16 位来存一个（2 字节）。<b>量化</b>就是改用更少的位，比如 8 位只能表示 256 个不同的值，4 位只有 16 个，每个参数都被「四舍五入」到最近的那一档。位数减半，文件和显存占用就减半，读得也更快。</p>
+<p>代价是误差。好在大模型的参数很多、相当「宽容」，研究发现精心设计的量化损失很小：</p>
+<div class="tl">
+ <div class="ev"><div class="y">2022.8</div><div class="h">LLM.int8()</div><div class="x">Dettmers 等人让 1750 亿参数的模型直接转成 8 位使用，显存减半，性能不降。关键是处理少数数值特别大的「离群」特征，把它们单独用高精度计算。</div></div>
+ <div class="ev"><div class="y">2022.10</div><div class="h">GPTQ</div><div class="x">只用约 4 个 GPU 小时，就把 1750 亿参数的模型压到每个参数 3 到 4 位，精度损失可以忽略。</div></div>
+ <div class="ev big"><div class="y">2023.5</div><div class="h">QLoRA</div><div class="x">把模型量化成 4 位后再做微调：在单张 48 GB 显卡上就能微调 650 亿参数的模型，效果和 16 位微调相当。</div></div>
+</div>
+<div class="demo" id="q-demo">
+ <div class="demo-h"><b>小实验 ②：亲手量化 48 个参数</b><span class="badge">真实算法 · 参数为随机生成</span></div>
+ <canvas class="plot pan" id="q-cv" width="640" height="260" aria-label="原始参数与量化后的参数"></canvas>
+ <div class="legend"><span><i style="background:var(--sub)"></i>原始值</span><span><i style="background:var(--accent)"></i>量化后</span><span><i style="background:var(--line)"></i>可用的档位</span></div>
+ <div class="temp-wrap">
+  <div class="temp-row"><span>每个参数用几位</span><span class="temp-val" id="q-bv"></span></div>
+  <input type="range" id="q-b" min="2" max="8" step="1" value="4" aria-label="位数">
+ </div>
+ <div class="row"><button class="tgl" id="q-out">加入一个离群值</button><button class="tgl" id="q-grp">分组量化（每 8 个一组）</button></div>
+ <div class="kpis"><div class="kpi">可用档位<b id="q-k1">–</b></div><div class="kpi">平均误差<b class="ac" id="q-k2">–</b></div><div class="kpi">70B 模型文件约<b id="q-k3">–</b></div></div>
+ <p class="lbl" id="q-cap"></p>
+ <p class="lbl">算法是最简单的「按最大绝对值缩放、四舍五入」（absmax 对称量化）。误差 = 量化前后差值的平均，相对于参数平均大小。文件大小只算参数本身，实际格式还有少量额外开销。</p>
+</div>
+<p>真实的量化方法（GPTQ、AWQ、NF4，以及本地运行常见的 GGUF 格式等）都比这个精巧，但核心问题相同：<b>用更少的档位表示同样一批数</b>，并想办法照顾那些特别大的离群值。按经验，8 位几乎无损；4 位是目前本地运行很常见的折中；再往下，质量下降通常就明显了。</p>
+
+<h2 id="s4"><span class="k">04</span>我的电脑能跑多大的模型？</h2>
+<p>粗略算法只要一行：<b>参数个数 × 每个参数的字节数</b>，就是装下模型本身要的内存。再留一些余量给上下文（第 4 篇的 KV 缓存）和运行时，就能估出够不够。在 Mac 上看「统一内存」，在 PC 上主要看显卡的显存。</p>
+<div class="demo" id="mem-demo">
+ <div class="demo-h"><b>小实验 ③：装得下吗？</b><span class="badge">粗略估算</span></div>
+ <div class="lbl">模型大小（参数个数）</div><div class="row seg" id="mem-p"></div>
+ <div class="lbl">精度</div><div class="row seg" id="mem-b"></div>
+ <div class="lbl">你的设备内存 / 显存</div><div class="row seg" id="mem-d"></div>
+ <svg id="mem-fig" viewBox="0 0 360 86" role="img" aria-label="内存占用对比" style="display:block;width:100%;max-width:520px;margin:10px auto 0"></svg>
+ <div class="kpis"><div class="kpi">模型本身<b id="mem-k1">–</b></div><div class="kpi">加上余量约<b id="mem-k2">–</b></div><div class="kpi">结论<b class="ac" id="mem-k3">–</b></div></div>
+ <p class="lbl" id="mem-cap"></p>
+ <p class="lbl">余量按模型大小的 20% 粗估；上下文开得越长，需要的余量越多。能装下也不代表跑得快：速度还取决于内存带宽和显卡算力。</p>
+</div>
+
+<h2 id="s5"><span class="k">05</span>开放权重与闭源模型</h2>
+<p>能不能拿到模型文件、在自己机器上跑，取决于它是不是<b>开放权重</b>（open weights）。Llama、Qwen、DeepSeek、Mistral、Gemma 等都公开了权重，可以下载、量化、微调。GPT、Claude、Gemini 的旗舰模型则只能通过网页或 API 使用。</p>
+<div style="overflow-x:auto">
+<table class="t">
+<tr><th></th><th>开放权重</th><th>闭源（API）</th></tr>
+<tr><td>怎么用</td><td>下载到自己的电脑或服务器上运行</td><td>通过网页、App 或 API 调用</td></tr>
+<tr><td>数据</td><td>可以完全不出本机</td><td>要发到服务商那里</td></tr>
+<tr><td>可改造</td><td>能量化、蒸馏、微调</td><td>只能用服务商提供的选项</td></tr>
+<tr><td>硬件</td><td>自己准备，越大越贵</td><td>不用管</td></tr>
+<tr><td>能力</td><td>进步很快，但最强的那批通常是闭源的</td><td>最前沿的模型多在这里</td></tr>
+</table>
+</div>
+<p>注意，「开放权重」不等于「开源」。2024 年 10 月，开放源代码促进会（OSI）发布了《开源 AI 定义》1.0：要称得上开源 AI，除了权重，还要公开足够详细的<b>训练数据信息</b>和训练、运行用的<b>代码</b>，并允许自由使用、修改、分享。很多开放权重模型只给了权重，许可证里还可能有使用限制。下载前看一眼许可证。</p>
+
+<h2 id="s6"><span class="k">06</span>第一部分回顾</h2>
+<p>到这里，「大模型本身」就讲完了。一张地图串起来：</p>
+<ol class="steps">
+<li><a href="../llm/">什么是 LLM</a>：一个预测下一个 token 的函数。</li>
+<li><a href="../pretrain/">预训练</a>：读海量文字，学会「像人那样写」。</li>
+<li><a href="../posttrain/">后训练</a>：用示范和偏好，把它变成乐于助人的助手。</li>
+<li><a href="../context/">上下文与提示词</a>：它每次只看眼前这串文字。</li>
+<li><a href="../hallucination/">幻觉与局限</a>：像，不等于真。</li>
+<li><a href="../rag/">RAG</a>：先查资料，再回答。</li>
+<li><a href="../reasoning/">推理模型</a>：先写草稿，再回答。</li>
+<li>蒸馏与量化：让它变小，跑在你身边。</li>
+</ol>
+<p>第二部分会从「模型」走向「智能体」：让模型调用工具、自己规划多步任务，以及 MCP、Skill 这些把它接入真实世界的方式。</p>
+
+<h2 id="s7"><span class="k">07</span>记住这些就够了</h2>
+<ol class="keep">
+<li><b>蒸馏</b>：让大模型当老师，用它的概率表或它生成的回答来训练小模型。小模型能学到大部分本事，但通常不是全部。</li>
+<li><b>量化</b>：参数个数不变，每个参数用更少的位存。8 位几乎无损，4 位是常见折中，内存需求就是「参数个数 × 每个参数的字节数」再加点余量。</li>
+<li><b>开放权重</b>的模型可以下载到本机运行、改造，但「开放权重」不等于「开源」，用之前要看许可证。</li>
+</ol>
+<div class="pn">
+ <a href="../reasoning/"><small>← 上一篇</small>推理模型</a>
+ <a class="nx" href="../tools/"><small>第二部分开始 →</small>工具调用</a>
+</div>
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Hinton、Vinyals、Dean，<a href="https://arxiv.org/abs/1503.02531" rel="noopener">Distilling the Knowledge in a Neural Network</a>（2015）。软目标、温度、宝马与垃圾车的例子。</li>
+<li>Sanh 等，<a href="https://arxiv.org/abs/1910.01108" rel="noopener">DistilBERT</a>（2019）。小 40%、保留 97%、快 60%。</li>
+<li>DeepSeek-AI，<a href="https://arxiv.org/abs/2501.12948" rel="noopener">DeepSeek-R1</a>（2025）。用 80 万条样本蒸馏到 Qwen 和 Llama 小模型。</li>
+<li>Dettmers 等，<a href="https://arxiv.org/abs/2208.07339" rel="noopener">LLM.int8()</a>（2022）。8 位推理、离群特征。</li>
+<li>Frantar 等，<a href="https://arxiv.org/abs/2210.17323" rel="noopener">GPTQ</a>（2022）。3 到 4 位的训练后量化。</li>
+<li>Dettmers 等，<a href="https://arxiv.org/abs/2305.14314" rel="noopener">QLoRA</a>（2023）。4 位量化 + 微调，单卡 48 GB 微调 65B。</li>
+<li>Open Source Initiative，<a href="https://opensource.org/ai/open-source-ai-definition" rel="noopener">The Open Source AI Definition 1.0</a>（2024）。</li>
+<li>Andrej Karpathy，<a href="https://www.youtube.com/watch?v=zjkBMFhNj_g" rel="noopener">Intro to Large Language Models</a>（2023）。70B 模型约 140 GB 的参数文件。</li>
+</ol>
+<p class="note">小实验 ① 的分数、② 的参数（随机生成）都是为演示设定的，但 softmax 和量化的计算是真实的；③ 的余量是粗略的经验估计。</p>
+</article>
+<footer>© <span id="y"></span> lucca.top</footer>
+</div>
+<script src="../assets/common.js?v=3"></script>
+<script src="small.js?v=3"></script>
+</body>
+</html>

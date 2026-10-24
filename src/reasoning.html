@@ -1,0 +1,108 @@
+<!--title: 推理模型：先想一想，再回答-->
+<!--short: 推理模型-->
+<!--meta: 第一部分 · 大模型本身 · 第 7 篇　|　约 14 分钟　|　3 个小实验-->
+<!--lead: 推理模型会在回答前先写一大段<strong>草稿</strong>（思维链），把难题拆成小步、一步步算、回头检查。道理很朴素：模型每写一个 token 只能做固定量的计算，<strong>多写草稿就等于多给它思考时间</strong>。2024 年起，人们开始用强化学习，专门把这种「先想再答」的习惯练出来。-->
+
+<h2 id="s1"><span class="k">01</span>为什么多写几个字，就能变聪明</h2>
+<p>回想第 1 篇：模型每输出一个 token，都要让整串文字从头到尾流过所有层，<b>每一步的计算量是固定的</b>，不会因为题目难就多算一会儿。所以，如果逼它「看完题马上报答案」，它只有一个 token 的计算量来解题。</p>
+<p>可它写下的每个字都会回到上下文里，成为下一步的输入。<b>写出来的中间步骤，就是它的草稿纸</b>：每一步只需要做一点点小计算，难题被摊到了很多个 token 上。Karpathy 的说法是：模型需要用 token 来思考。</p>
+<div class="demo" id="tk-demo">
+ <div class="demo-h"><b>动画：计算量摊在 token 上</b><span class="badge">示意图</span></div>
+ <svg id="tk-fig" viewBox="0 0 360 200" role="img" aria-label="每个 token 的计算量相同，多写 token 就多了计算" style="max-width:520px;margin:0 auto;display:block"></svg>
+ <div class="row seg" id="tk-mode"></div>
+ <p class="lbl" id="tk-cap"></p>
+</div>
+<p>这也解释了上一篇提到的短板：一口气心算多位数乘法很容易错，但让它把过程写出来就可靠得多。</p>
+
+<h2 id="s2"><span class="k">02</span>思维链：从一句提示开始</h2>
+<div class="tl">
+ <div class="ev"><div class="y">2022.1</div><div class="h">思维链提示（Chain-of-Thought）</div><div class="x">Google 的 Wei 等人发现：在提示里放几道「带解题过程」的例题，模型就会模仿着先写过程再给答案。只用 8 道这样的例题，PaLM 540B 在小学数学应用题测试 GSM8K 上达到了当时最好成绩。这种好处主要在足够大的模型上才出现。</div></div>
+ <div class="ev"><div class="y">2022.3</div><div class="h">多想几遍，投票（自洽性）</div><div class="x">Google 的 Wang 等人让模型对同一道题写多条不同的思路，再看哪个答案出现最多。这让 GSM8K 的准确率又提高了 17.9 个百分点。下一节就来玩这个。</div></div>
+ <div class="ev"><div class="y">2022.5</div><div class="h">「让我们一步一步地想」</div><div class="x">东京大学等的 Kojima 等人发现，连例题都不用给，只在问题后面加一句 “Let's think step by step”，InstructGPT 在 MultiArith 上的准确率就从 17.7% 升到 78.7%，GSM8K 从 10.4% 升到 40.7%。</div></div>
+ <div class="ev big"><div class="y">2024.9</div><div class="h">OpenAI o1：把「先想」训练成本能</div><div class="x">不再靠提示词诱导，而是用强化学习训练模型在回答前写很长的内部思维链。OpenAI 发现，训练时的强化学习越多、回答时想得越久，成绩就越好。</div></div>
+ <div class="ev big"><div class="y">2025.1</div><div class="h">DeepSeek-R1：公开配方</div><div class="x">DeepSeek 公开了论文和模型权重，详细说明了只靠「答案对不对」的奖励，也能练出会反思、会验算的推理模型。</div></div>
+</div>
+<p>下面是同一道题的两种做法。注意「分步」时，每一步都是很容易的小计算：</p>
+<div class="demo" id="cot-demo">
+ <div class="demo-h"><b>小实验 ①：一口气答 vs 分步写</b><span class="badge">玩具概率</span></div>
+ <div class="msg u" style="max-width:100%">一个笔记本 23 元，买 47 个一共多少钱？</div>
+ <div class="row seg" id="cot-mode"></div>
+ <div class="sample" id="cot-steps"></div>
+ <div class="lbl" id="cot-lbl"></div>
+ <div class="cands" id="cot-bars"></div>
+ <div class="row"><button class="pri" id="cot-run">做 20 遍看看</button></div>
+ <div class="vote" id="cot-vote"></div>
+ <p class="lbl" id="cot-cap"></p>
+ <p class="lbl">概率是为演示设的。真实情况是：越大、越强的模型，一口气答对的把握越高；但题越难，分步写的好处越明显。</p>
+</div>
+
+<h2 id="s3"><span class="k">03</span>多想几遍再投票</h2>
+<p>采样有随机性（第 1 篇的温度），同一道题让模型写好几遍，思路和答案都可能不同。<b>自洽性</b>（self-consistency）的做法是：写 N 遍，取出现最多的答案。OpenAI 公布 o1 的成绩时也用过这招：AIME 2024 数学竞赛题，o1 只答一遍平均做对 74%，<b>答 64 遍取多数</b>能到 83%。</p>
+<div class="demo" id="sc-demo">
+ <div class="demo-h"><b>小实验 ②：投票能把准确率提高多少？</b><span class="badge">真实概率计算</span></div>
+ <canvas class="plot pan" id="sc-cv" width="640" height="250" aria-label="投票次数与准确率"></canvas>
+ <div class="legend"><span><i style="background:var(--accent)"></i>多数投票的准确率</span><span><i style="background:var(--sub)"></i>只答一遍</span></div>
+ <div class="temp-wrap">
+  <div class="temp-row"><span>每条思路答对的概率 p</span><span class="temp-val" id="sc-pv"></span></div>
+  <input type="range" id="sc-p" min="20" max="90" step="5" value="65" aria-label="每条思路答对的概率">
+  <div class="temp-row" style="margin-top:10px"><span>写几遍（N）</span><span class="temp-val" id="sc-nv"></span></div>
+  <input type="range" id="sc-n" min="0" max="12" step="1" value="4" aria-label="写几遍">
+ </div>
+ <div class="kpis"><div class="kpi">只答一遍<b id="sc-k1">–</b></div><div class="kpi">投票后<b class="ac" id="sc-k2">–</b></div><div class="kpi">要付出的计算<b id="sc-k3">–</b></div></div>
+ <div class="row"><button class="pri" id="sc-run">真的抽 N 条投一次票</button></div>
+ <div class="vote" id="sc-vote"></div>
+ <p class="lbl" id="sc-cap"></p>
+ <p class="lbl">按二项分布精确计算，取最不利的假设：所有错误答案都一样，所以只有答对的票数过半才算赢。真实中错误答案往往五花八门、互相分票，投票的效果通常更好。</p>
+</div>
+<p>把 p 拖到 50% 以下试试：<b>投票反而让结果更差</b>。投票只能放大模型「本来就更倾向」的那个答案，把一个大多时候会错的模型变不成对的。这也是为什么提高单次思考的质量（下一节）才是根本。</p>
+
+<h2 id="s4"><span class="k">04</span>推理模型：用强化学习练出「会想」</h2>
+<p>思维链提示是「请它先想」，推理模型则是在后训练里<b>专门训练它想</b>。DeepSeek-R1 的论文把做法讲得很清楚，核心出奇简单：</p>
+<ol class="steps">
+<li>找大量<b>答案可以自动判对错</b>的题：数学题（对一下最终答案）、编程题（跑一下测试）。</li>
+<li>让模型对每道题写好几遍，每遍都先在 &lt;think&gt; 标签里写思考过程，再给答案。</li>
+<li>只按两条规则打分：<b>答案对不对</b>、<b>格式对不对</b>。不评价过程写得好不好，也不用人类标注者。</li>
+<li>用强化学习（他们用的是 GRPO：同一题的几遍答案互相比较，比平均好的就加强）更新模型，然后重复。</li>
+</ol>
+<p>结果很惊人。先只用这种强化学习训练基础模型（R1-Zero），AIME 2024 的单次准确率从 15.6% 升到 71.0%，多数投票到 86.7%。没有人教它怎么想，但它的回答<b>自己越写越长</b>，并开始出现回头检查、换思路这些行为。论文里记录了一个「顿悟时刻」（aha moment）：模型在草稿中写下「等等，等等。这是个顿悟时刻……」，然后重新审视自己的解法。</p>
+<div class="demo" id="rl-demo">
+ <div class="demo-h"><b>小实验 ③：只奖励「答对」，会练出什么？</b><span class="badge">玩具模型</span></div>
+ <p class="lbl">模型做题时有 4 种习惯，每种的答对率和长度是我们设定的。每一轮：同一题做 8 遍，答对得 1 分；比这 8 遍平均分高的习惯被加强，低的被削弱（GRPO 的思路）。注意：奖励里<b>完全没提长度</b>。</p>
+ <div class="cands" id="rl-bars"></div>
+ <div class="vote" id="rl-vote"></div>
+ <canvas class="plot pan" id="rl-cv" width="640" height="200" aria-label="训练过程中的准确率与长度"></canvas>
+ <div class="legend"><span><i style="background:var(--green)"></i>平均答对率</span><span><i style="background:var(--blue)"></i>平均回答长度</span></div>
+ <div class="kpis"><div class="kpi">训练轮数<b id="rl-k0">0</b></div><div class="kpi">平均答对率<b class="ac" id="rl-k1">–</b></div><div class="kpi">平均长度（token）<b id="rl-k2">–</b></div></div>
+ <div class="row"><button class="pri" id="rl-one">训练 1 轮</button><button id="rl-auto">自动训练 40 轮</button><button id="rl-reset">重置</button></div>
+ <p class="lbl" id="rl-cap"></p>
+</div>
+<p>R1-Zero 也有毛病：思考过程不好读，还会中英文混杂。所以正式的 DeepSeek-R1 先用少量写得规范的长思维链示范「热身」，再做强化学习，最后再加上常规的后训练，让它在聊天、写作上也表现正常。</p>
+<p>OpenAI 没有公开 o1 的训练细节，只说它是「用强化学习训练的」，而且<b>训练时的计算</b>和<b>回答时思考的时长</b>都能提升成绩。这是除「把预训练做大」之外的另一条扩展路线。o1 的原始思维链对用户隐藏，只展示模型生成的摘要；DeepSeek-R1 则会显示完整的思考内容。</p>
+
+<h2 id="s5"><span class="k">05</span>想得越久越好吗？</h2>
+<ul>
+<li><b>更慢、更贵</b>：草稿也是 token，要计算、要计费。一个难题可能先想上几千个 token 才开口。所以很多产品让你选「思考强度」，或由系统自动判断要不要深想。</li>
+<li><b>不是什么都有用</b>：OpenAI 的人类偏好评测显示，o1-preview 在数据分析、编程、数学上明显更受欢迎，但在一些纯文字类任务上并不比 GPT-4o 更受欢迎。改写邮件、聊天，用不着先想三分钟。</li>
+<li><b>草稿未必是真实想法</b>：Anthropic 2025 年的研究在题目里偷偷放了「提示」，模型用了提示，却常常不在思维链里承认。平均下来，Claude 3.7 Sonnet 只有 25% 的情况提到了提示，DeepSeek-R1 为 39%。所以<b>思维链能帮我们观察模型，但不能全信</b>。</li>
+<li><b>仍会出错</b>：推理模型减少了计算和逻辑错误，但冷门事实照样可能编（第 5 篇），需要查资料的问题还是要靠 RAG 或工具。</li>
+</ul>
+<div class="note">怎么用：数学、编程、复杂分析、需要多步规划的问题，选推理模型或打开「深度思考」；简单问答、润色、聊天，用普通模型就好，又快又便宜。用推理模型时，<b>把目标和条件说清楚就够了</b>，不必再写「请一步步想」，它本来就会。</div>
+
+<h2 id="s6"><span class="k">06</span>记住这些就够了</h2>
+<ol class="keep">
+<li>模型每个 token 的计算量是固定的，<b>写出中间步骤 = 多给它思考的时间</b>。这就是思维链有用的原因。</li>
+<li>推理模型用强化学习，在<b>能自动判对错</b>的题上反复练，只奖励答对，「先拆解、再验算」的习惯和更长的思考就自己长出来了。</li>
+<li>多想、多投票都要花更多计算，而且只对难题划算；思维链也不一定忠实反映模型「真正」怎么想的。</li>
+</ol>
+<!--PN-->
+<h2 id="refs" style="font-size:18px"><span class="k">参考</span>想看原版的话</h2>
+<ol class="refs">
+<li>Wei 等，<a href="https://arxiv.org/abs/2201.11903" rel="noopener">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</a>（2022）。8 道例题、PaLM 540B、GSM8K。</li>
+<li>Kojima 等，<a href="https://arxiv.org/abs/2205.11916" rel="noopener">Large Language Models are Zero-Shot Reasoners</a>（2022）。“Let's think step by step”，MultiArith 17.7%→78.7%。</li>
+<li>Wang 等，<a href="https://arxiv.org/abs/2203.11171" rel="noopener">Self-Consistency Improves Chain of Thought Reasoning</a>（2022）。多条思路投票，GSM8K +17.9%。</li>
+<li>OpenAI，<a href="https://openai.com/index/learning-to-reason-with-llms/" rel="noopener">Learning to reason with LLMs</a>（2024.9）。o1、训练与测试时计算、AIME 74%/83%、人类偏好评测、隐藏思维链。</li>
+<li>DeepSeek-AI，<a href="https://arxiv.org/abs/2501.12948" rel="noopener">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>（2025.1）。R1-Zero、规则奖励、GRPO、回答变长、顿悟时刻、15.6%→71.0%。</li>
+<li>Anthropic，<a href="https://www.anthropic.com/research/reasoning-models-dont-say-think" rel="noopener">Reasoning models don't always say what they think</a>（2025）。思维链的忠实性。</li>
+<li>Andrej Karpathy，<a href="https://www.youtube.com/watch?v=7xTGNNLPyMI" rel="noopener">Deep Dive into LLMs like ChatGPT</a>（2025）。「模型需要 token 来思考」、强化学习与推理模型。</li>
+</ol>
+<p class="note">小实验 ① 和 ③ 中的概率、答对率、长度都是为演示设定的；小实验 ② 是按二项分布的精确计算。文中的论文数字引自上面的原始资料。</p>
