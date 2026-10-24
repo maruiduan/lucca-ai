@@ -20,9 +20,12 @@ h1{font-size:30px;font-weight:600;letter-spacing:.05em;line-height:1.35}
 .badge.live{color:var(--accent);border-color:var(--accent)}
 /* index list */
 .list{display:grid;gap:12px}
-.item{display:flex;gap:16px;align-items:flex-start;padding:18px 20px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:inherit;text-decoration:none;transition:transform .2s,border-color .2s,box-shadow .2s}
-a.item:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.06)}
-.item.off{opacity:.55}
+.item{display:flex;gap:16px;align-items:flex-start;padding:18px 20px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:inherit;text-decoration:none;transition:transform .2s,border-color .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+a.item *{pointer-events:none}
+/* 悬停只给鼠标：触屏上 :hover 会粘住，第一次点按进不去 */
+@media (hover:hover) and (pointer:fine){a.item:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.06)}}
+a.item:active{transform:scale(.98);border-color:var(--accent)}
+.item.off{cursor:default;border-style:dashed}
 .num{font:600 13px/1 system-ui,sans-serif;color:var(--accent);min-width:28px;height:28px;border-radius:50%;border:1px solid currentColor;display:grid;place-items:center;margin-top:2px}
 .item.off .num{color:var(--sub)}
 .item .t{font-size:19px;font-weight:600;letter-spacing:.04em;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -31,6 +34,7 @@ a.item:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 
 .part-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:46px 0 14px}
 .part-head h2{font-size:20px;letter-spacing:.08em}
 .part-head span{color:var(--sub);font-size:13px}
+.part-head .soon-note{margin-left:auto;letter-spacing:.06em;font-family:system-ui,sans-serif}
 /* article */
 article{font-size:17px;line-height:1.95}
 article p{margin:14px 0}
