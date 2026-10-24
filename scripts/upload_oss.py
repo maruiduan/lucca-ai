@@ -17,11 +17,14 @@ HASHED = re.compile(r"\.[0-9a-f]{8}\.[A-Za-z0-9]+$")
 NOCACHE = {"index.html", "robots.txt", "sitemap.xml", "stamp-manifest.json", "favicon.ico", "favicon.svg"}
 ENTRY_NAMES = {"robots.txt", "sitemap.xml"}
 
-# Copied from live GET responses on 2026-10-24. Do not tighten or extend here.
+# Baseline copied from live GET responses on 2026-10-24.
+# script-src and connect-src also allow https://hm.baidu.com so Baidu Tongji can
+# load hm.js and report. Do not add commas: persistent-header framing splits on them.
 CSP = (
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; "
     "img-src 'self' data: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; "
-    "script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'self'"
+    "script-src 'self' 'unsafe-inline' https://hm.baidu.com; "
+    "connect-src 'self' https://hm.baidu.com; form-action 'self'"
 )
 COMMON_SECURITY = (
     ("Permissions-Policy", "geolocation=(), microphone=(), camera=()"),
@@ -112,6 +115,11 @@ def check() -> None:
         raise SystemExit("referrer policy mismatch")
     if "," in decoded["Content-Security-Policy"]:
         raise SystemExit("CSP contains a comma; persistent-header framing would split it")
+    csp = decoded["Content-Security-Policy"]
+    for directive in ("script-src", "connect-src"):
+        part = csp.split(directive, 1)[1].split(";", 1)[0]
+        if "https://hm.baidu.com" not in part:
+            raise SystemExit(f"{directive} must allow https://hm.baidu.com")
     robots = object_headers("robots.txt", Path("robots.txt"))
     if "Content-Security-Policy" in decode_persistent(robots["x-oss-persistent-headers"]):
         raise SystemExit("robots.txt must not carry CSP")

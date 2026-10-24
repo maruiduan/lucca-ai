@@ -4,6 +4,7 @@ import re, os, sys, html
 from pathlib import Path
 ROOT=str(Path(__file__).resolve().parent)
 V='3'
+TONGJI=Path(ROOT,'scripts','baidu_tongji.html').read_text(encoding='utf-8').strip()
 SERIES=[('llm','什么是 LLM'),('pretrain','预训练'),('posttrain','后训练'),('context','上下文与提示词'),
         ('hallucination','幻觉与局限'),('rag','RAG：先查资料再回答'),('reasoning','推理模型'),('small','蒸馏与量化')]
 TPL='''<!doctype html>
@@ -18,6 +19,7 @@ TPL='''<!doctype html>
 <title>{title_txt} · AI 是怎么回事 · lucca</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/ai.css?v={V}">
+{tongji}
 </head>
 <body>
 <div class="progress" id="progress"></div>
@@ -58,7 +60,7 @@ def build(slug):
     toc='\n'.join(f'<li><a href="#{h}">{re.sub("<[^>]+>","",t)}</a></li>' for h,t in heads)
     body=body.replace('<!--PN-->',pn(i))
     assert '<div class="pn">' in body, slug+' missing PN marker'
-    out=TPL.format(title=meta['title'],title_txt=re.sub('<[^>]+>','',meta['short']),meta=meta['meta'],lead=meta['lead'],toc=toc,tocn=len(heads),body=body,slug=slug,n=i+1,V=V)
+    out=TPL.format(title=meta['title'],title_txt=re.sub('<[^>]+>','',meta['short']),meta=meta['meta'],lead=meta['lead'],toc=toc,tocn=len(heads),body=body,slug=slug,n=i+1,V=V,tongji=TONGJI)
     d=f'{ROOT}/site/{slug}';os.makedirs(d,exist_ok=True)
     tmp=f'{d}/index.html.tmp';open(tmp,'w',encoding='utf-8').write(out);os.replace(tmp,f'{d}/index.html')
     print('built',slug,len(out.encode()),'bytes',len(heads),'sections')
