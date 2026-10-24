@@ -16,6 +16,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Require OSS secrets
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          missing=0
+          if [ -z "$OSS_ACCESS_KEY_ID" ]; then
+            echo "::error::Repository secret OSS_ACCESS_KEY_ID is empty."
+            missing=1
+          fi
+          if [ -z "$OSS_ACCESS_KEY_SECRET" ]; then
+            echo "::error::Repository secret OSS_ACCESS_KEY_SECRET is empty."
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "Set OSS_ACCESS_KEY_ID and OSS_ACCESS_KEY_SECRET, then re-run. Stopped before checkout, install, stamp, and upload."
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
