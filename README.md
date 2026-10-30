@@ -26,3 +26,7 @@ Every public HTML page loads Baidu Tongji for `ai.lucca.top`. The `hm.js` hash i
 
 ## 不蒜子
 Not added. The counter needs a long-running backend; this bucket cannot host it. Do not load `busuanzi.ibruce.info`.
+
+## 逻辑回归测试
+
+使用 Node.js 24+：`npm ci --ignore-scripts && npm test`。测试使用 jsdom 加载真实文章 HTML/JS，覆盖受限/损坏的字号存储、目录快速开关与焦点恢复、生成演示的旧定时器取消，并检查全部文章脚本初始化。CI 在资源指纹构建与 OSS 上传前运行测试；jsdom 不替代真实浏览器的布局/视觉验收。

@@ -8,18 +8,35 @@ $('#y').textContent=new Date().getFullYear();
 /* ---------- 阅读进度 & 字号 ---------- */
 const prog=$('#progress');
 let pt=false;addEventListener('scroll',()=>{if(pt)return;pt=true;requestAnimationFrame(()=>{pt=false;const h=document.documentElement;prog.style.transform='scaleX('+(h.scrollTop/(h.scrollHeight-h.clientHeight))+')';});},{passive:true});
-const art=$('#art');let fs=+(localStorage.getItem('ai-fs')||17);
-const setFs=v=>{fs=Math.max(14,Math.min(22,v));art.style.fontSize=fs+'px';localStorage.setItem('ai-fs',fs);};
-if(localStorage.getItem('ai-fs'))setFs(fs);
-$('#fs-m').onclick=()=>setFs(fs-1);$('#fs-p').onclick=()=>setFs(fs+1);
+// Storage is optional (private browsing / disabled storage must not break the page).
+const art=$('#art');let storedFs=null;
+try{storedFs=localStorage.getItem('ai-fs');}catch(e){}
+let fs=Number(storedFs);if(!storedFs||!Number.isFinite(fs))fs=17;
+fs=Math.max(14,Math.min(22,fs));
+const setFs=v=>{fs=Math.max(14,Math.min(22,v));if(art)art.style.fontSize=fs+'px';try{localStorage.setItem('ai-fs',String(fs));}catch(e){}};
+if(art&&storedFs!==null)art.style.fontSize=fs+'px';
+if($('#fs-m'))$('#fs-m').onclick=()=>setFs(fs-1);
+if($('#fs-p'))$('#fs-p').onclick=()=>setFs(fs+1);
 
 /* ---------- 吸顶小栏 & 目录 ---------- */
 (function(){
   const toc=$('#toc'),bar=$('#sbar'),cur=$('#sb-cur'),sheet=$('#sheet'),list=$('#sheet-list');
   if(innerWidth<560)toc.removeAttribute('open');
   toc.querySelectorAll('a').forEach(a=>{const li=el('li');const b=a.cloneNode(true);b.onclick=()=>close();li.append(b);list.append(li);});
-  const open=()=>{sheet.hidden=false;requestAnimationFrame(()=>sheet.classList.add('show'));document.body.style.overflow='hidden';};
-  const close=()=>{sheet.classList.remove('show');document.body.style.overflow='';setTimeout(()=>sheet.hidden=true,reduce?0:220);};
+  let hideTimer=null,showFrame=null,isOpen=false,previousOverflow='',previousFocus=null;
+  const open=()=>{
+    clearTimeout(hideTimer);cancelAnimationFrame(showFrame);
+    if(!isOpen){previousOverflow=document.body.style.overflow;previousFocus=document.activeElement;}
+    isOpen=true;sheet.hidden=false;document.body.style.overflow='hidden';
+    showFrame=requestAnimationFrame(()=>{if(isOpen){sheet.classList.add('show');$('#sheet-x').focus();}});
+  };
+  const close=()=>{
+    if(!isOpen)return;
+    isOpen=false;cancelAnimationFrame(showFrame);sheet.classList.remove('show');
+    document.body.style.overflow=previousOverflow;
+    if(previousFocus&&previousFocus.isConnected)previousFocus.focus({preventScroll:true});
+    hideTimer=setTimeout(()=>{if(!isOpen)sheet.hidden=true;},reduce?0:220);
+  };
   $('#sb-toc').onclick=open;$('#sheet-x').onclick=close;$('#sheet-bg').onclick=close;
   addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close();});
   const heads=[...document.querySelectorAll('article h2[id]')];
@@ -325,7 +342,7 @@ renderTok();
 
 /* ---------- 下一个词：玩具模型 ---------- */
 (function(){
-  let toks=[];let T=1;let auto=null;
+  let toks=[];let T=1;let auto=null,pendingSample=null;
   const ctx=$('#nt-ctx'),info=$('#nt-info'),cands=$('#nt-cands'),inp=$('#nt-in'),sm=$('#sm-table');
   function state(){
     let a=S,b=S;const n=toks.length;
@@ -358,7 +375,7 @@ renderTok();
     cands.innerHTML='';
     d.slice(0,8).forEach(a=>{
       const b=el('button','cand');b.innerHTML=`<span class="w"></span><span class="bar"><span></span></span><span class="p">${(a.p*100).toFixed(a.p<.1?1:0)}%</span>`;
-      b.querySelector('.w').textContent=a.w;b.onclick=()=>append(a.w);b.dataset.w=a.w;cands.append(b);
+      b.querySelector('.w').textContent=a.w;b.onclick=()=>{stopAuto();append(a.w);};b.dataset.w=a.w;cands.append(b);
       requestAnimationFrame(()=>requestAnimationFrame(()=>b.querySelector('.bar span').style.transform='scaleX('+Math.max(.005,a.p)+')'));
     });
     if(d.length>8)cands.append(el('div','lbl',`……还有 ${d.length-8} 个概率更小的候选没列出来。`));
@@ -379,24 +396,26 @@ renderTok();
     const d=dist(state().m);let r=Math.random(),acc=0,pick=d[d.length-1];
     for(const a of d){acc+=a.p;if(r<=acc){pick=a;break;}}
     const btn=[...cands.querySelectorAll('.cand')].find(c=>c.dataset.w===pick.w);
-    if(btn&&!reduce){btn.classList.add('pick');setTimeout(()=>append(pick.w),280);}else append(pick.w);
+    if(btn&&!reduce){btn.classList.add('pick');pendingSample=setTimeout(()=>{pendingSample=null;append(pick.w);},280);}else append(pick.w);
     return pick.w;
   }
-  function stopAuto(){clearTimeout(auto);auto=null;$('#nt-auto').textContent='自动写到句号';}
+  function stopAuto(cancelSample=true){clearTimeout(auto);auto=null;if(cancelSample){clearTimeout(pendingSample);pendingSample=null;}$('#nt-auto').textContent='自动写到句号';}
   $('#nt-sample').onclick=()=>{stopAuto();sample();};
   $('#nt-auto').onclick=()=>{
     if(auto){stopAuto();return;}
+    stopAuto();
     $('#nt-auto').textContent='停';let n=0;
     if(toks.length&&END.has(toks[toks.length-1])){}
-    const tick=()=>{const w=sample();n++;if(END.has(w)||n>=30){stopAuto();return;}auto=setTimeout(tick,reduce?50:650);};
+    const tick=()=>{const w=sample();n++;if(END.has(w)||n>=30){stopAuto(false);return;}auto=setTimeout(tick,reduce?50:650);};
     tick();
   };
   $('#nt-undo').onclick=()=>{stopAuto();toks.pop();inp.value=toks.join('');render();};
   const presets=['今天天气','我想','小猫喜欢','床前明月','人工智能','春天来了'];
   presets.forEach(p=>{const b=el('button',null,p+'…');b.onclick=()=>{stopAuto();toks=tokenize(p).map(t=>t.t);inp.value=p;render();};$('#nt-presets').append(b);});
-  let it;inp.addEventListener('input',()=>{clearTimeout(it);it=setTimeout(()=>{stopAuto();toks=tokenize(inp.value).map(t=>t.t);render();},200);});
+  // Keep model state in sync immediately: generation may be clicked before a debounce fires.
+  inp.addEventListener('input',()=>{stopAuto();toks=tokenize(inp.value).map(t=>t.t);render();});
   const tr=$('#nt-t'),tv=$('#nt-tv'),td=$('#nt-tdesc');
-  const setT=()=>{T=+tr.value;tv.textContent=T.toFixed(1);td.textContent=T<.5?'保守：几乎总选第一名':T<=1.2?'正常':'大胆：冷门词机会变大';document.querySelectorAll('#nt-tq button').forEach(b=>b.classList.toggle('on',Math.abs(+b.dataset.t-T)<.01));render();};
+  const setT=()=>{stopAuto();T=+tr.value;tv.textContent=T.toFixed(1);td.textContent=T<.5?'保守：几乎总选第一名':T<=1.2?'正常':'大胆：冷门词机会变大';document.querySelectorAll('#nt-tq button').forEach(b=>b.classList.toggle('on',Math.abs(+b.dataset.t-T)<.01));render();};
   tr.addEventListener('input',setT);document.querySelectorAll('#nt-tq button').forEach(b=>b.onclick=()=>{tr.value=b.dataset.t;setT();});
   toks=tokenize('今天天气').map(t=>t.t);inp.value='今天天气';render();
 })();
