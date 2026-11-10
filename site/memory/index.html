@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
 <title>记忆与子任务 · AI 是怎么回事 · lucca</title>
-<!--seo--><meta name="description" content="记忆与子任务：智能体怎样记住该记的事，什么时候该把任务拆给多个子智能体。"><link rel="canonical" href="https://ai.lucca.top/memory/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="记忆与子任务 · AI 是怎么回事 · lucca"><meta property="og:description" content="记忆与子任务：智能体怎样记住该记的事，什么时候该把任务拆给多个子智能体。"><meta property="og:url" content="https://ai.lucca.top/memory/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<!--seo--><meta name="description" content="记忆与子任务：智能体怎样记住该记的事，什么时候该把任务拆给多个子智能体。"><link rel="canonical" href="https://ai.lucca.top/memory/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="记忆与子任务 · AI 是怎么回事 · lucca"><meta property="og:description" content="记忆与子任务：智能体怎样记住该记的事，什么时候该把任务拆给多个子智能体。"><meta property="og:url" content="https://ai.lucca.top/memory/"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://ai.lucca.top/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="AI 是怎么回事 · lucca"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ai.lucca.top/og.png"><meta name="twitter:image:alt" content="AI 是怎么回事 · lucca"><!--/seo-->
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/ai.css?v=4">
 <style>
 .mem{display:grid;gap:6px;margin:10px 0}
@@ -45,7 +45,7 @@ var _hmt = _hmt || [];
 <nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 15 篇</span></nav>
 <article id="art">
 <h1>记忆与子任务：记住该记的，分出去该分的</h1>
-<p class="meta-line">第二部分 · 智能体 · 第 7 篇　|　约 15 分钟　|　4 个小实验</p>
+<p class="meta-line"><span>第二部分 · 智能体</span><span>第 7 篇</span><span>约 15 分钟</span><span>4 个小实验</span></p>
 <div class="lead"><small>一句话结论</small>模型本身没有记忆，窗口也有上限。智能体用两招突破：<strong>记忆</strong>是把信息存到窗口<strong>外面</strong>，需要时再取回来；<strong>子任务</strong>是把活分给另一个智能体，让它在<strong>自己的窗口</strong>里干，只交回结论。两招都很有用，也都有坑：记错了、取错了、分得各干各的。</div>
 <details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">8 节 · 点开/收起</span></summary>
 <ol>

@@ -1,0 +1,19 @@
+name: Check
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  upload-oss-check:
+    name: upload-oss-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Audit OSS security headers
+        run: python3 scripts/upload_oss.py --check
