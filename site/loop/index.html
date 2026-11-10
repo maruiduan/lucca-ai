@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
 <title>智能体循环 · AI 是怎么回事 · lucca</title>
-<!--seo--><meta name="description" content="智能体循环：AI 智能体怎样想一步、做一步，遇到工具出错或结果不对时如何发现问题并改计划。"><link rel="canonical" href="https://ai.lucca.top/loop/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="智能体循环 · AI 是怎么回事 · lucca"><meta property="og:description" content="智能体循环：AI 智能体怎样想一步、做一步，遇到工具出错或结果不对时如何发现问题并改计划。"><meta property="og:url" content="https://ai.lucca.top/loop/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<!--seo--><meta name="description" content="智能体循环：AI 智能体怎样想一步、做一步，遇到工具出错或结果不对时如何发现问题并改计划。"><link rel="canonical" href="https://ai.lucca.top/loop/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="智能体循环 · AI 是怎么回事 · lucca"><meta property="og:description" content="智能体循环：AI 智能体怎样想一步、做一步，遇到工具出错或结果不对时如何发现问题并改计划。"><meta property="og:url" content="https://ai.lucca.top/loop/"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://ai.lucca.top/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="AI 是怎么回事 · lucca"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ai.lucca.top/og.png"><meta name="twitter:image:alt" content="AI 是怎么回事 · lucca"><!--/seo-->
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/ai.css?v=4">
 <style>
 .lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 4px}
@@ -59,7 +59,7 @@ var _hmt = _hmt || [];
 <nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 10 篇</span></nav>
 <article id="art">
 <h1>智能体循环：想一步，做一步</h1>
-<p class="meta-line">第二部分 · 智能体 · 第 2 篇　|　约 15 分钟　|　4 个小实验</p>
+<p class="meta-line"><span>第二部分 · 智能体</span><span>第 2 篇</span><span>约 15 分钟</span><span>4 个小实验</span></p>
 <div class="lead"><small>一句话结论</small>上一篇的工具调用是「问一次、用一次工具、答一次」。把它放进一个<strong>循环</strong>：模型想下一步做什么 → 调用工具 → 看结果 → 再想，一直转到任务完成，它就成了<strong>智能体</strong>（agent）。难点不在循环本身，而在<strong>什么时候停</strong>、<strong>出错了怎么办</strong>，以及<strong>这件事到底需不需要智能体</strong>。</div>
 <details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">9 节 · 点开/收起</span></summary>
 <ol>

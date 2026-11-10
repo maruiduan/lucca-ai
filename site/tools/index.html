@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
 <title>工具调用 · AI 是怎么回事 · lucca</title>
-<!--seo--><meta name="description" content="工具调用（function calling）是什么：模型怎么「动手」查天气、算数、调接口，一次调用实际传了什么。"><link rel="canonical" href="https://ai.lucca.top/tools/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="工具调用 · AI 是怎么回事 · lucca"><meta property="og:description" content="工具调用（function calling）是什么：模型怎么「动手」查天气、算数、调接口，一次调用实际传了什么。"><meta property="og:url" content="https://ai.lucca.top/tools/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<!--seo--><meta name="description" content="工具调用（function calling）是什么：模型怎么「动手」查天气、算数、调接口，一次调用实际传了什么。"><link rel="canonical" href="https://ai.lucca.top/tools/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="工具调用 · AI 是怎么回事 · lucca"><meta property="og:description" content="工具调用（function calling）是什么：模型怎么「动手」查天气、算数、调接口，一次调用实际传了什么。"><meta property="og:url" content="https://ai.lucca.top/tools/"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://ai.lucca.top/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="AI 是怎么回事 · lucca"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ai.lucca.top/og.png"><meta name="twitter:image:alt" content="AI 是怎么回事 · lucca"><!--/seo-->
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/ai.css?v=4">
 <style>
 .lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 4px}
@@ -62,7 +62,7 @@ var _hmt = _hmt || [];
 <nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 9 篇</span></nav>
 <article id="art">
 <h1>工具调用：模型怎么「动手」</h1>
-<p class="meta-line">第二部分 · 智能体 · 第 1 篇　|　约 14 分钟　|　3 个小实验</p>
+<p class="meta-line"><span>第二部分 · 智能体</span><span>第 1 篇</span><span>约 14 分钟</span><span>3 个小实验</span></p>
 <div class="lead"><small>一句话结论</small>模型本身只会输出文字。工具调用（function calling）就是让它输出一种<strong>格式固定的文字</strong>，意思是「请帮我用某个工具、参数是这些」；真正去执行的是<strong>你的程序</strong>，执行完把结果再交回给模型，由它写成回答。模型负责<strong>决定</strong>，程序负责<strong>动手</strong>。</div>
 <details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">8 节 · 点开/收起</span></summary>
 <ol>

@@ -17,7 +17,7 @@ TPL='''<!doctype html>
 <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex,nofollow">
 <title>{title_txt} · AI 是怎么回事 · lucca</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/ai.css?v={V}">
 {tongji}
 </head>

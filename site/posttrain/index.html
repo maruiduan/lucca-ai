@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16150f" media="(prefers-color-scheme: dark)">
 <title>后训练 · AI 是怎么回事 · lucca</title>
-<!--seo--><meta name="description" content="后训练是怎么回事：指令微调和人类反馈强化学习（RLHF）如何把只会接话的模型变成会回答问题的助手。"><link rel="canonical" href="https://ai.lucca.top/posttrain/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="后训练 · AI 是怎么回事 · lucca"><meta property="og:description" content="后训练是怎么回事：指令微调和人类反馈强化学习（RLHF）如何把只会接话的模型变成会回答问题的助手。"><meta property="og:url" content="https://ai.lucca.top/posttrain/"><meta property="og:locale" content="zh_CN"><meta name="twitter:card" content="summary"><!--/seo-->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23a33a2b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f3ec' font-family='serif'%3EL%3C/text%3E%3C/svg%3E">
+<!--seo--><meta name="description" content="后训练是怎么回事：指令微调和人类反馈强化学习（RLHF）如何把只会接话的模型变成会回答问题的助手。"><link rel="canonical" href="https://ai.lucca.top/posttrain/"><meta property="og:type" content="article"><meta property="og:site_name" content="AI 是怎么回事 · lucca"><meta property="og:title" content="后训练 · AI 是怎么回事 · lucca"><meta property="og:description" content="后训练是怎么回事：指令微调和人类反馈强化学习（RLHF）如何把只会接话的模型变成会回答问题的助手。"><meta property="og:url" content="https://ai.lucca.top/posttrain/"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://ai.lucca.top/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="AI 是怎么回事 · lucca"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://ai.lucca.top/og.png"><meta name="twitter:image:alt" content="AI 是怎么回事 · lucca"><!--/seo-->
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/ai.css?v=4">
 <script>
 var _hmt = _hmt || [];
@@ -31,7 +31,7 @@ var _hmt = _hmt || [];
 <nav class="crumb"><a class="home" href="https://www.lucca.top/" aria-label="回 lucca 首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg><span>lucca</span></a><span>›</span><a href="../">AI 是怎么回事</a><span>›</span><span>第 3 篇</span></nav>
 <article id="art">
 <h1>后训练：从会接话到会回答</h1>
-<p class="meta-line">第一部分 · 大模型本身 · 第 3 篇　|　约 14 分钟　|　3 个小实验</p>
+<p class="meta-line"><span>第一部分 · 大模型本身</span><span>第 3 篇</span><span>约 14 分钟</span><span>3 个小实验</span></p>
 <div class="lead"><small>一句话结论</small>后训练是在基础模型上<strong>再补一段课</strong>：先用人写的示范对话教它「答题的样子」（指令微调），再请人比较回答的好坏，用这些偏好把它推向更有用、更诚实、更安全的方向（人类反馈强化学习，RLHF）。它花的算力比预训练少得多，却决定了模型像不像一个好助手。</div>
 <details class="toc" id="toc" open><summary><b>目录</b><span class="toc-n">7 节 · 点开/收起</span></summary>
 <ol>
