@@ -38,7 +38,7 @@ const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
   const lanes=LN.map(t=>{const d=el('div','lane');d.innerHTML='<b>'+t.split(' ')[0]+'</b>'+t.split(' ')[1];$('#sim-lanes').append(d);return d;});
   const J=o=>JSON.stringify(o,null,1).replace(/\n\s*/g,' ');
   const TOOLS='工具说明书（3 个）：get_weather 查天气 · calculator 计算器 · search_docs 查图书馆资料库';
-  const expr='37*48*1.08',val=Function('return '+expr)();const valS=String(Math.round(val*100)/100);
+  const expr='37*48*1.08',val=37*48*1.08;const valS=String(Math.round(val*100)/100);
   const Q=[
    {q:'首尔现在多少度？',
     ok:[['call',2,'模型 → 程序：申请调用工具',J({name:'get_weather',arguments:{city:'首尔'}}),'问题要实时数据，模型自己不知道，所以开申请单。'],
