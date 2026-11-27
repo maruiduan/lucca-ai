@@ -94,7 +94,9 @@ function dragOn(cv,fn){let down=false;cv.addEventListener('pointerdown',e=>{down
   let lines=[],V=[],idx=new Map(),cnt,rowN,Wt,N=0,opt=0,steps=0,hist=[],timer=null,name='唐诗';
   const cv=$('#mini-cv'),c=cv.getContext('2d'),ta=$('#mini-text');
   function setup(text){
-    lines=text.split(/\n+/).map(s=>s.replace(/[\s，。！？、,.!?]/g,'')).filter(Boolean);
+    const clean=s=>s.split(/\n+/).map(t=>t.replace(/[\s，。！？、,.!?]/g,'')).filter(Boolean);
+    lines=clean(text);
+    if(!lines.length)lines=clean('你好');
     const chars=new Set();lines.forEach(l=>[...l].forEach(ch=>chars.add(ch)));
     V=['^','$',...chars];idx=new Map(V.map((v,i)=>[v,i]));const n=V.length;
     cnt=Array.from({length:n},()=>new Float64Array(n));rowN=new Float64Array(n);N=0;

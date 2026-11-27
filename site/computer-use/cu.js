@@ -44,10 +44,11 @@ const segOn=(box,i)=>[...box.children].forEach((x,j)=>x.classList.toggle('on',j=
   let tm=[];
   function show(n){[...box.children].forEach((r,i)=>{r.querySelector('i').style.width=(i<n?D[i][1]:0)+'%';r.querySelector('b').textContent=i<n?D[i][1]+'%':'';});
     $('#os-cap').textContent=n>=D.length?'从 12% 到 86%，两年多一点，已超过论文里的人类成绩。差距主要缩在「点准」和「多步不迷路」上。':'';}
-  function anim(){tm.forEach(clearTimeout);tm=[];show(0);const reduce=window.AI.reduce;if(reduce){show(D.length);return;}
+  const sb=[...$('#os-s').children];
+  function anim(){if(sb[1].classList.contains('on'))return;tm.forEach(clearTimeout);tm=[];show(0);const reduce=window.AI.reduce;if(reduce){show(D.length);return;}
     D.forEach((d,i)=>tm.push(setTimeout(()=>show(i+1),250+i*380)));}
-  const sb=[...$('#os-s').children];sb[0].onclick=()=>{segOn($('#os-s'),0);anim();};sb[1].onclick=()=>{segOn($('#os-s'),1);tm.forEach(clearTimeout);show(D.length);};
-  show(0);window.AI.onVisible($('#os-demo'),anim);
+  sb[0].onclick=()=>{segOn($('#os-s'),0);anim();};sb[1].onclick=()=>{segOn($('#os-s'),1);tm.forEach(clearTimeout);show(D.length);};
+  show(0);window.AI.onVisible($('#os-demo'),v=>{if(v)anim();});
 })();
 /* ④ */
 (function(){
